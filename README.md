@@ -25,4 +25,3 @@ Anggota:
 3. Nadhin Awwali Fari' (25/568887/NPA/19997)
 4. Tika Nur Firdausiana (25/569106/NPA/19998)
 5. Jelita Krisnauli Manalu (25/569111/NPA/19999)
->>>>>>> c9846823f457a1bc9733b04402845aef5f3f427e
