@@ -1,0 +1,68 @@
+.login-bg-container {
+    /* Ganti 'url' dengan path ke gambar background Anda di src/assets/ */
+    background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)),
+      url('https://i.pinimg.com/1200x/55/a8/32/55a8322c2e7cb9bbdd000b964111d654.jpg') no-repeat center center;
+    background-size: cover;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+  }
+  
+  .logo-icon-simple {
+    /* Atur warna ikon jadi biru (sesuai warna tombol login) */
+    color: #ffffff; 
+    margin-bottom: 0.5rem;
+    
+    /* Atur ukuran ikonnya (sesuai gambar Anda) */
+    font-size: 6rem; /* Anda bisa ubah ukurannya di sini */
+  }
+  
+  .brand-title {
+    text-align: center;
+  }
+  
+  .brand-title h1 {
+    font-size: 3.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+  
+  .brand-title p {
+    font-size: 1.1rem;
+    font-weight: 300;
+  }
+  
+  .login-form-container {
+    width: 80%;
+    max-width: 450px;
+  }
+  
+  .login-form-container h2 {
+    font-weight: 600;
+    color: var(--dark-color);
+  }
+  
+  .or-divider {
+    display: block;
+    position: relative;
+    overflow: hidden;
+  }
+  .or-divider::before,
+  .or-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    border-top: 1px solid #dee2e6;
+  }
+  .or-divider::before {
+    right: 100%;
+    margin-right: 15px;
+  }
+  .or-divider::after {
+    left: 100%;
+    margin-left: 15px;
+  }
