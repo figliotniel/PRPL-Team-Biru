@@ -4,7 +4,7 @@ session_start();
 $db_host = '127.0.0.1';
 $db_user = 'root';
 $db_pass = 'root';
-$db_name = 'db_sitanas';
+$db_name = 'sitanas';
 $port = 3306;
 
 define('BASE_URL', 'http://127.0.0.1:8000');
