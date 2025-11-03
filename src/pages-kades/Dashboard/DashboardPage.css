@@ -1,0 +1,45 @@
+.summary-card {
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .summary-card .icon-wrapper {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: #fff;
+  }
+  
+  /* Warna ikon sesuai gambar */
+  .icon-wrapper.blue { background-color: #e7f0ff; color: #0d6efd; }
+  .icon-wrapper.green { background-color: #e6f9f0; color: #198754; }
+  .icon-wrapper.orange { background-color: #fff8e1; color: #ffc107; }
+  .icon-wrapper.cyan { background-color: #e0fbfc; color: #0dcaf0; }
+  
+  .summary-card .card-title {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+  }
+  
+  .summary-card .card-value {
+    font-weight: 700;
+    color: var(--dark-color);
+  }
+  
+  .summary-card .card-unit {
+    font-size: 1rem;
+    font-weight: 400;
+    color: #6c757d;
+    margin-left: 0.25rem;
+  }
+  
+  .table thead {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    color: #6c757d;
+  }

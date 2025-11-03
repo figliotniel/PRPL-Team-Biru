@@ -15,7 +15,6 @@ import {
 import { 
   FiLogOut 
 } from 'react-icons/fi'; // Ikon untuk Logout
-import './Layout.css';
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -49,8 +48,8 @@ const Sidebar = () => {
           </NavLink>
         </li>
         <li className="nav-item">
-          <NavLink to="/profil-saya" className="nav-link">
-            <CgProfile className="nav-icon" /> Profil Saya
+          <NavLink to="/DaftarAkun" className="nav-link">
+            <CgProfile className="nav-icon" /> Daftar Akun
           </NavLink>
         </li>
       </ul>

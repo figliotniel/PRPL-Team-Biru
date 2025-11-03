@@ -1,6 +1,5 @@
 import React from 'react';
 import { Navbar as BootstrapNavbar, Nav, NavDropdown, Image } from 'react-bootstrap';
-import './Layout.css'; // Shared layout CSS
 
 const Navbar = () => {
   return (

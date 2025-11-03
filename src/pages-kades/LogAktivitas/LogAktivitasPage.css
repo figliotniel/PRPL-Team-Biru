@@ -1,0 +1,37 @@
+/* src/pages/LogAktivitasPage.css */
+
+/* Samakan style Card Header dengan halaman Laporan */
+.log-filter-card .card-header {
+  font-weight: 600;
+  font-size: 1rem;
+}
+.log-riwayat-card .card-header {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.Form.Select{
+  font-weight: 1000;
+  font-size: 0.8rem;
+}
+
+.Form.Control{
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+
+/* Samakan font-size tabel agar konsisten */
+.log-table {
+  font-size: 0.9rem;
+}
+
+/* Sedikit perbaikan untuk Badge agar warnanya solid */
+.badge.bg-success {
+  background-color: #198754 !important;
+  color: white;
+}
+
+.badge.bg-danger {
+  background-color: #dc3545 !important;
+  color: white;
+}
