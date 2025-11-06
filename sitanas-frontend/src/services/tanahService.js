@@ -32,3 +32,28 @@ export const getTanahList = async (page = 1, status = '', search = '') => {
     throw error;
   }
 };
+
+export const createTanah = async (tanahData) => {
+    try {
+        // Laravel akan menerima data ini dan memvalidasinya
+        const response = await api.post('/tanah', tanahData);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const getMasterData = async () => {
+    try {
+        const response = await api.get('/master-data/tanah'); 
+        return response.data;
+    } catch (error) {
+        // Fallback jika API belum dibuat (Opsional: Kembalikan data dummy)
+        return {
+            kodefikasi: {}, // Asumsi array kosong jika belum ada
+            asal: [],
+            statusSertifikat: [],
+            penggunaan: []
+        };
+    }
+};

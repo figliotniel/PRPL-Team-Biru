@@ -1,13 +1,11 @@
-// src/App.jsx
 import { Routes, Route } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/common/ProtectedRoute';
-// KOREKSI PATH: Menggunakan path relatif yang benar dari root 'src'
 import ManajemenPenggunaPage from './pages/ManajemenPenggunaPage'; 
-import LaporanPage from './pages/LaporanPage'; // <-- Tambahkan jika belum ada
-import LogsPage from './pages/LogsPage'; // <-- Tambahkan jika belum ada
+import LaporanPage from './pages/LaporanPage'; 
+import LogsPage from './pages/LogsPage';
 
 function App() {
   return (
@@ -34,6 +32,7 @@ function App() {
       
       {/* Rute 404 */}
       <Route path="*" element={<h2>404: Halaman Tidak Ditemukan</h2>} />
+      <Route path="tambah-tanah" element={<TambahTanahPage />} />
     </Routes>
   );
 }
