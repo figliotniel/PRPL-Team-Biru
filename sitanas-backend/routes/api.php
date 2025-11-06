@@ -41,5 +41,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Detail Aset (Read)
         Route::get('/tanah/{id}', [TanahController::class, 'show']);
+
+        Route::middleware('admin')->group(function () {
+    // ... (rute CRUD lainnya) ...
+    Route::put('/tanah/{id}', [TanahController::class, 'update']); // <-- Rute Edit
+    });
     });
 });

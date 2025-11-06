@@ -7,7 +7,7 @@ use App\Models\TanahKasDesa;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Auth; // Tetap gunakan facade Auth
 use Illuminate\Validation\ValidationException;
 use App\Models\PemanfaatanTanah;
 
@@ -15,36 +15,15 @@ class TanahController extends Controller
 {
     /**
      * Menampilkan daftar aset tanah dengan paginasi dan filter.
+     * GET /api/tanah
      */
-
-    public function show($id)
-{
-    // Eager Loading: Ambil data aset, dan semua data terkaitnya (relasi) sekaligus
-    $tanah = TanahKasDesa::with([
-        // Data input dan validasi
-        'penginput:id,nama_lengkap', 
-        'validator:id,nama_lengkap',
-        // Data pemanfaatan
-        'pemanfaatan' => function ($query) {
-            $query->with('user:id,nama_lengkap'); // Ambil juga user yang input pemanfaatan
-        },
-        // Data dokumen dan histori
-        'dokumenPendukung', 
-        'histori', 
-    ])
-    ->findOrFail($id); // Mencari aset, jika tidak ada, mengembalikan 404
-
-    return response()->json($tanah);
-}
     public function index(Request $request)
     {
         $status = $request->query('status');
         $search = $request->query('search');
 
-        // Pastikan Model TanahKasDesa sudah diimpor (sudah diimpor di atas)
         $query = TanahKasDesa::query();
 
-        // Relasi 'penginput' (diaktifkan)
         $query->with('penginput:id,nama_lengkap'); 
 
         // Terapkan filter status
@@ -63,16 +42,40 @@ class TanahController extends Controller
         
         $tanahList = $query->orderBy('created_at', 'desc')->paginate(10); 
 
-        return $tanahList; // Laravel otomatis format ini menjadi JSON
+        return $tanahList; 
     }
     
     /**
+     * Menampilkan data detail aset tunggal.
+     * GET /api/tanah/{id}
+     */
+    public function show($id)
+    {
+        // Eager Loading: Ambil data aset, dan semua data terkaitnya (relasi) sekaligus
+        $tanah = TanahKasDesa::with([
+            // Data input dan validasi
+            'penginput:id,nama_lengkap', 
+            'validator:id,nama_lengkap',
+            // Data pemanfaatan
+            'pemanfaatan' => function ($query) {
+                $query->with('user:id,nama_lengkap'); // Ambil juga user yang input pemanfaatan
+            },
+            // Data dokumen dan histori
+            'dokumenPendukung', 
+            'histori', 
+        ])
+        ->findOrFail($id); 
+
+        return response()->json($tanah);
+    }
+
+    /**
      * Menyimpan data aset tanah baru. (Admin Only)
+     * POST /api/tanah
      */
     public function store(Request $request)
     {
         // 1. Validasi Data
-        // Menambahkan validasi untuk semua field form yang penting
         try {
             $validated = $request->validate([
                 'kode_barang' => 'required|string|max:100|unique:tanah_kas_desa,kode_barang',
@@ -88,10 +91,13 @@ class TanahController extends Controller
                 'koordinat' => 'nullable|string|max:100',
                 'kondisi' => 'required|in:Baik,Rusak Ringan,Rusak Berat',
                 'lokasi' => 'nullable|string',
-                // Batas-batas biasanya tidak mandatory
+                'batas_utara' => 'nullable|string|max:255',
+                'batas_timur' => 'nullable|string|max:255',
+                'batas_selatan' => 'nullable|string|max:255',
+                'batas_barat' => 'nullable|string|max:255',
+                'keterangan' => 'nullable|string',
             ]);
         } catch (ValidationException $e) {
-            // Mengirim error validasi 422 (Unprocessable Entity)
             return response()->json(['errors' => $e->errors()], 422);
         }
 
@@ -103,7 +109,7 @@ class TanahController extends Controller
                 'luas' => $validated['luas'],
                 'asal_perolehan' => $validated['asal_perolehan'],
                 
-                // Data form lainnya
+                // Data form lainnya (diambil dari request jika tidak divalidasi, tapi field sudah dicek)
                 'nup' => $request->nup,
                 'tanggal_perolehan' => $validated['tanggal_perolehan'],
                 'harga_perolehan' => $validated['harga_perolehan'],
@@ -122,18 +128,17 @@ class TanahController extends Controller
                 'keterangan' => $request->keterangan,
                 
                 // Status Sistem
-                'diinput_oleh' => auth::id(),
+                'diinput_oleh' => Auth::id(), // PERBAIKAN UTAMA: Menggunakan Auth::id()
                 'status_validasi' => 'Diproses',
             ]);
 
-            // 3. Log Aktivitas (Opsional: Butuh Model LogAktivitas)
-            // Logika Log Aktivitas dan Notifikasi akan diimplementasikan di sini
+            // 3. Log Aktivitas & Notifikasi (Implementasi Log)
+            // ...
+
+            return response()->json(['message' => 'Data tanah berhasil ditambahkan dan menunggu validasi.', 'tanah_id' => $tanah->id], 201);
             
         } catch (\Exception $e) {
-            // Jika terjadi kesalahan saat menyimpan (misal: koneksi DB putus)
             return response()->json(['message' => 'Gagal menyimpan data karena kesalahan server.'], 500);
         }
-
-        return response()->json(['message' => 'Data tanah berhasil ditambahkan dan menunggu validasi.', 'tanah_id' => $tanah->id], 201);
     }
 }
