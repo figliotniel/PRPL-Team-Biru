@@ -1,6 +1,4 @@
-// src/services/tanahService.js
-import api from './api'; // Impor instance axios kita
-
+import api from './api';
 // API untuk 4 kartu statistik
 export const getStats = async () => {
   try {
@@ -35,7 +33,6 @@ export const getTanahList = async (page = 1, status = '', search = '') => {
 
 export const createTanah = async (tanahData) => {
     try {
-        // Laravel akan menerima data ini dan memvalidasinya
         const response = await api.post('/tanah', tanahData);
         return response.data;
     } catch (error) {
@@ -48,9 +45,8 @@ export const getMasterData = async () => {
         const response = await api.get('/master-data/tanah'); 
         return response.data;
     } catch (error) {
-        // Fallback jika API belum dibuat (Opsional: Kembalikan data dummy)
         return {
-            kodefikasi: {}, // Asumsi array kosong jika belum ada
+            kodefikasi: {},
             asal: [],
             statusSertifikat: [],
             penggunaan: []
