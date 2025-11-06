@@ -6,7 +6,8 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController; 
 use App\Http\Controllers\Api\TanahController; 
 use App\Http\Controllers\Api\UserController;
-use App\Models\Role; // <-- TAMBAHKAN IMPORT INI
+use App\Models\Role;
+use App\Http\Controllers\Api\MasterDataController;
 
 // Rute publik (tanpa login)
 Route::post('/login', [AuthController::class, 'login']);
@@ -34,5 +35,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/master-data/roles', function() {
             return Role::all(); 
         });
+    
+        // Rute Master Data Tanah
+        Route::get('/master-data/tanah', [MasterDataController::class, 'tanah']);
     });
 });
