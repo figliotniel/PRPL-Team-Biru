@@ -53,3 +53,13 @@ export const getMasterData = async () => {
         };
     }
 };
+
+export const getTanahDetail = async (id) => {
+    try {
+        // Backend harus menggunakan Eager Loading di sini!
+        const response = await api.get(`/tanah/${id}`); 
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};

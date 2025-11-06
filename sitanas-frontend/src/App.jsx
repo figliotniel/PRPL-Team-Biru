@@ -6,6 +6,8 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 import ManajemenPenggunaPage from './pages/ManajemenPenggunaPage'; 
 import LaporanPage from './pages/LaporanPage'; 
 import LogsPage from './pages/LogsPage';
+import TambahTanahPage from './pages/TambahTanahPage';
+import DetailTanahPage from './pages/DetailTanahPage';
 
 function App() {
   return (

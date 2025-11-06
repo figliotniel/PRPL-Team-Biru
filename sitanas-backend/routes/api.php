@@ -38,5 +38,8 @@ Route::middleware('auth:sanctum')->group(function () {
     
         // Rute Master Data Tanah
         Route::get('/master-data/tanah', [MasterDataController::class, 'tanah']);
+
+        // Detail Aset (Read)
+        Route::get('/tanah/{id}', [TanahController::class, 'show']);
     });
 });

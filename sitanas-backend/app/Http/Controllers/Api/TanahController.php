@@ -8,13 +8,34 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException; // Untuk penanganan error validasi
+use Illuminate\Validation\ValidationException;
+use App\Models\PemanfaatanTanah;
 
 class TanahController extends Controller
 {
     /**
      * Menampilkan daftar aset tanah dengan paginasi dan filter.
      */
+
+    public function show($id)
+{
+    // Eager Loading: Ambil data aset, dan semua data terkaitnya (relasi) sekaligus
+    $tanah = TanahKasDesa::with([
+        // Data input dan validasi
+        'penginput:id,nama_lengkap', 
+        'validator:id,nama_lengkap',
+        // Data pemanfaatan
+        'pemanfaatan' => function ($query) {
+            $query->with('user:id,nama_lengkap'); // Ambil juga user yang input pemanfaatan
+        },
+        // Data dokumen dan histori
+        'dokumenPendukung', 
+        'histori', 
+    ])
+    ->findOrFail($id); // Mencari aset, jika tidak ada, mengembalikan 404
+
+    return response()->json($tanah);
+}
     public function index(Request $request)
     {
         $status = $request->query('status');
