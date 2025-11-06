@@ -4,14 +4,17 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext'; // 1. Impor
+import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <AuthProvider> {/* 2. Bungkus semua */}
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </AuthProvider>
+    <BrowserRouter>
+      <NotificationProvider> {/* <-- 2. Bungkus di luar AuthProvider */}
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </NotificationProvider>
+    </BrowserRouter>
   </React.StrictMode>
 );

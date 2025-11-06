@@ -1,12 +1,9 @@
-// src/components/layout/Topbar.jsx
 import React from 'react';
-import '../../assets/Layout.css';
-// Ambil gambar avatar default (bisa kamu cari di internet dan simpan di src/assets)
-// import defaultAvatar from '../../assets/default-avatar.png'; 
+import { useAuth } from 'hooks/useAuth'; // <-- 1. Path diubah ke absolut
+import 'assets/Layout.css'; // <-- 2. Path diubah ke absolut
 
-const Topbar = ({ user }) => {
-  // Cek foto profil, jika tidak ada pakai default
-  // const avatar = user?.foto_profil || defaultAvatar;
+const Topbar = () => {
+  const { user } = useAuth(); // <-- Panggil hook untuk ambil data user
 
   return (
     <header className="topbar">
@@ -15,7 +12,6 @@ const Topbar = ({ user }) => {
           <span>
             Halo, <strong>{user?.nama_lengkap || 'Pengguna'}</strong>
           </span>
-          {/* <img src={avatar} alt="Avatar" className="profile-avatar" /> */}
           <i className="fas fa-user-circle" style={{fontSize: "32px", marginLeft: "10px"}}></i>
         </div>
       </div>

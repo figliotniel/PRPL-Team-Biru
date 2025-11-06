@@ -10,6 +10,18 @@ export const getUsers = async () => {
     }
 };
 
+// --- FUNGSI BARU ---
+// Mengambil detail satu pengguna (Admin Only)
+export const getUserDetail = async (userId) => {
+    try {
+        const response = await api.get(`/users/${userId}`);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
+
 // Membuat pengguna baru (Admin Only)
 export const createUser = async (userData) => {
     try {
@@ -20,6 +32,19 @@ export const createUser = async (userData) => {
         throw error;
     }
 };
+
+// --- FUNGSI BARU ---
+// Mengupdate pengguna (Admin Only)
+export const updateUser = async (userId, userData) => {
+    try {
+        // userData berisi: nama_lengkap, email, role_id (password opsional)
+        const response = await api.put(`/users/${userId}`, userData);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
 
 // Menonaktifkan/Menghapus pengguna (Admin Only)
 export const deleteUser = async (userId) => {
@@ -39,6 +64,7 @@ export const getRoles = async () => {
         return response.data;
     } catch (error) {
         // SIMULASI jika backend belum buat
+        console.warn("API /master-data/roles gagal, menggunakan data simulasi.");
         return [
             { id: 1, nama_role: 'Admin Desa' },
             { id: 2, nama_role: 'Kepala Desa' },

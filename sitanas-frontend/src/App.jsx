@@ -1,40 +1,55 @@
-import { Routes, Route } from 'react-router-dom';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import Layout from './components/layout/Layout';
-import ProtectedRoute from './components/common/ProtectedRoute';
-import ManajemenPenggunaPage from './pages/ManajemenPenggunaPage'; 
-import LaporanPage from './pages/LaporanPage'; 
-import LogsPage from './pages/LogsPage';
-import TambahTanahPage from './pages/TambahTanahPage';
-import DetailTanahPage from './pages/DetailTanahPage';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import LoginPage from 'pages/LoginPage'; // Menghapus ./
+import Layout from 'components/layout/Layout'; // Menghapus ./
+import ProtectedRoute from 'components/common/ProtectedRoute'; // Menghapus ./
+
+// --- Impor Semua Halaman Anda ---
+import DashboardPage from 'pages/DashboardPage'; // Menghapus ./
+import LaporanPage from 'pages/LaporanPage'; // Menghapus ./
+import LogsPage from 'pages/LogsPage'; // Menghapus ./
+import ManajemenPenggunaPage from 'pages/ManajemenPenggunaPage'; // Menghapus ./
+import TambahTanahPage from 'pages/TambahTanahPage'; // Menghapus ./
+import EditTanahPage from 'pages/EditTanahPage'; // Menghapus ./
+import DetailTanahPage from 'pages/DetailTanahPage'; // Menghapus ./
+// Halaman 404 bisa dibuat nanti, untuk sekarang kita pakai teks
+// import NotFoundPage from 'pages/NotFoundPage';
 
 function App() {
   return (
     <Routes>
-      {/* Rute Publik */}
-      <Route path="/" element={<LoginPage />} />
+      {/* Rute Publik (Login) */}
       <Route path="/login" element={<LoginPage />} />
 
-      {/* Grup Rute Terlindungi */}
-      <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        {/* Rute Aset */}
+      {/* Rute Terlindungi (Semua halaman setelah login) */}
+      <Route 
+        path="/" 
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        {/* Halaman Indeks: Langsung arahkan ke dashboard */}
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        
+        {/* Rute Utama */}
         <Route path="dashboard" element={<DashboardPage />} />
         
-        {/* Rute Laporan & Log */}
+        {/* Rute Aset Tanah */}
+        <Route path="tambah-tanah" element={<TambahTanahPage />} />
+        <Route path="edit-tanah/:id" element={<EditTanahPage />} />
+        <Route path="detail-tanah/:id" element={<DetailTanahPage />} /> 
+
+        {/* Rute Lainnya (dari kode Anda sebelumnya) */}
         <Route path="laporan" element={<LaporanPage />} />
         <Route path="logs" element={<LogsPage />} />
-
-        {/* Rute Manajemen Pengguna */}
         <Route path="manajemen-pengguna" element={<ManajemenPenggunaPage />} />
-        
-        {/* Rute Tambahan (Isi dengan halaman baru lainnya) */}
 
       </Route>
       
-      {/* Rute 404 */}
-      <Route path="*" element={<h2>404: Halaman Tidak Ditemukan</h2>} />
-      <Route path="tambah-tanah" element={<TambahTanahPage />} />
+      {/* Rute 404 (Halaman Tidak Ditemukan) */}
+      {/* <Route path="*" element={<NotFoundPage />} /> */}
+      <Route path="*" element={<h2 style={{textAlign: 'center', marginTop: '50px'}}>404: Halaman Tidak Ditemukan</h2>} />
     </Routes>
   );
 }
