@@ -1,36 +1,10 @@
-// src/pages/TambahTanahPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { createTanah, getMasterData } from '../services/tanahService';
-import TanahForm from '../components/common/TanahForm'; // <-- Impor form
+// Perbaikan Path: Menggunakan path absolut dari 'src/' dan ekstensi .js
+import { createTanah, getMasterData } from '../services/tanahService'; 
+import TanahForm from '../components/common/TanahForm';
 import { useAuth } from '../hooks/useAuth';
-import { useNotification } from '../hooks/useNotification'; // <-- 1. Impor hook
-
-function TambahTanahPage() {
-    // ... (state lain)
-    const { addNotification } = useNotification(); // <-- 2. Panggil hook
-
-    // ...
-
-    const handleSubmit = async (e, form) => {
-        // ... (logika submit)
-        try {
-            await createTanah(dataToSend);
-            
-            // 3. GANTI alert() DENGAN INI:
-            addNotification("Data aset berhasil ditambahkan!"); 
-            
-            navigate('/dashboard'); 
-        } catch (err) {
-            // ... (logika error)
-            setSubmitError(validationError);
-            
-            // 4. Kita juga bisa pakai ini untuk error
-            addNotification("Gagal menyimpan: " + validationError, "error");
-        } finally {
-            setSubmitLoading(false);
-        }
-    };
+import { useNotification } from '../hooks/useNotification';
 
 // State awal form
 const initialFormState = {
@@ -43,61 +17,80 @@ const initialFormState = {
     batas_selatan: '', batas_barat: '', keterangan: '',
 };
 
+// --- HANYA ADA SATU DEFINISI FUNGSI ---
 function TambahTanahPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const { showNotification } = useNotification(); // Panggil hook notifikasi
     const [masterData, setMasterData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [submitError, setSubmitError] = useState(null);
     const [submitLoading, setSubmitLoading] = useState(false);
 
+    // Ambil data master (dropdown, dll) saat halaman dimuat
     useEffect(() => {
         const fetchMaster = async () => {
             try {
                 const data = await getMasterData();
                 setMasterData(data);
             } catch (err) {
-                setSubmitError("Gagal memuat data master (kodefikasi, dll).");
+                // Tampilkan notifikasi error jika gagal memuat
+                showNotification("Gagal memuat data master (kodefikasi, dll). Pastikan backend berjalan.", "error");
             } finally {
                 setLoading(false);
             }
         };
         fetchMaster();
-    }, []);
+    }, [showNotification]); // Tambahkan showNotification sebagai dependency
 
+    // Fungsi untuk menangani submit form
     const handleSubmit = async (e, form) => {
         e.preventDefault();
         setSubmitLoading(true);
-        setSubmitError(null);
 
         // Map data form
         const dataToSend = {
             ...form,
-            harga_perolehan: parseFloat(form.harga_perolehan || 0),
+            // Pastikan angka dikirim sebagai angka, bukan string
+            harga_perolehan: parseFloat(form.harga_perolehan || 0), 
             luas: parseFloat(form.luas),
-            kategori_utama: undefined, // Hapus field sementara
+            // Hapus field sementara yang tidak perlu dikirim ke backend
+            kategori_utama: undefined, 
             sub_kategori: undefined,
         };
 
         try {
             await createTanah(dataToSend);
-            alert("Data aset berhasil ditambahkan!");
+            
+            // Ganti alert() dengan notifikasi sukses
+            showNotification("Data aset berhasil ditambahkan!", "success");
+            
+            // Arahkan kembali ke dashboard setelah sukses
             navigate('/dashboard'); 
+
         } catch (err) {
+            // Tangkap error validasi dari backend (jika ada)
             const validationError = err.response?.data?.errors 
                                     ? Object.values(err.response.data.errors).flat().join('; ')
-                                    : "Gagal menyimpan data.";
-            setSubmitError(validationError);
+                                    : "Gagal menyimpan data. Periksa koneksi atau data Anda.";
+            
+            // Tampilkan notifikasi error
+            showNotification(validationError, "error");
         } finally {
             setSubmitLoading(false);
         }
     };
 
+    // --- Validasi Role ---
     if (user?.role_id !== 1) {
-        return <div className="notification error">Akses ditolak.</div>;
+        return <div className="notification error">Akses ditolak. Hanya Admin yang dapat menambah data.</div>;
     }
-    if (loading) return <div style={{textAlign: 'center', padding: '50px'}}>Loading...</div>;
 
+    // --- Tampilan Loading ---
+    if (loading) {
+        return <div style={{textAlign: 'center', padding: '50px'}}>Memuat data formulir...</div>;
+    }
+
+    // --- Tampilan Halaman ---
     return (
         <>
             <div className="content-header">
@@ -112,13 +105,13 @@ function TambahTanahPage() {
                         masterData={masterData}
                         onSubmit={handleSubmit}
                         submitLoading={submitLoading}
-                        error={submitError}
+                        // Error sekarang ditangani oleh useNotification,
+                        // jadi kita tidak perlu mengirim prop 'error' lagi
                     />
                 </div>
             </div>
         </>
     );
-    }
 }
 
 export default TambahTanahPage;

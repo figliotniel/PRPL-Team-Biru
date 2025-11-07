@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\MasterKodefikasi;
+// use App\Models\MasterKodefikasi; // Tidak terpakai
 use App\Models\MasterAsalPerolehan;
 use App\Models\MasterStatusSertifikat;
 use App\Models\MasterPenggunaan;
@@ -31,10 +31,12 @@ class MasterDataController extends Controller
             ]
         ];
 
-        // Simulasikan data master lainnya (hanya field nama_asal, nama_status, dsb.)
-        $asal = MasterAsalPerolehan::select('nama_asal')->get();
-        $statusSertifikat = MasterStatusSertifikat::select('nama_status')->get();
-        $penggunaan = MasterPenggunaan::select('nama_penggunaan')->get();
+        // --- PERBAIKAN DI BAWAH INI ---
+        // Ambil SEMUA data (ID dan Nama), bukan hanya 'select(nama_...)'
+        $asal = MasterAsalPerolehan::all();
+        $statusSertifikat = MasterStatusSertifikat::all();
+        $penggunaan = MasterPenggunaan::all();
+        // --- BATAS PERBAIKAN ---
 
         // Format master kodefikasi untuk form (hanya kode utama)
         $master_kode_utama = collect($kodefikasi)->map(function ($item, $key) {
@@ -52,9 +54,13 @@ class MasterDataController extends Controller
         return response()->json([
             'master_kode_utama' => $master_kode_utama,
             'kodefikasi' => $kodefikasi_js,
+            
+            // --- PERBAIKAN DI BAWAH INI ---
+            // Kirim array objek lengkap
             'asal' => $asal,
             'statusSertifikat' => $statusSertifikat,
             'penggunaan' => $penggunaan
+            // --- BATAS PERBAIKAN ---
         ]);
     }
 }

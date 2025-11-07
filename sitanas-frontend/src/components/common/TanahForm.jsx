@@ -1,4 +1,3 @@
-// src/components/common/TanahForm.jsx
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -67,13 +66,15 @@ function TanahForm({ initialData, masterData, onSubmit, submitLoading, error }) 
     const mapCenter = mapPosition || [-7.7956, 110.3695]; // Default Yogyakarta
 
     // Filter sub-kategori berdasarkan kategori utama yang dipilih
+    // 'selectedSubs' SEKARANG ADALAH OBJEK: { "001": "Nama Sub 1", "002": "Nama Sub 2" }
     const selectedSubs = form.kategori_utama && masterData?.kodefikasi 
-                        ? masterData.kodefikasi[form.kategori_utama] || [] 
-                        : [];
+                        ? masterData.kodefikasi[form.kategori_utama] || {} // Default ke objek kosong
+                        : {};
 
     return (
         <form onSubmit={(e) => onSubmit(e, form)}>
-            {error && <div className="notification error">{error}</div>}
+            {/* Notifikasi error sekarang ditangani oleh useNotification di halaman parent */}
+            {/* {error && <div className="notification error">{error}</div>} */}
             
             <div className="grid-2-col">
                 
@@ -91,9 +92,20 @@ function TanahForm({ initialData, masterData, onSubmit, submitLoading, error }) 
                     <label htmlFor="sub_kategori">Sub-Kategori Tanah</label>
                     <select id="sub_kategori" name="sub_kategori" className="form-control" value={form.sub_kategori} onChange={handleChange} required>
                         <option value="" disabled>-- Pilih Sub-Kategori --</option>
-                        {selectedSubs.map((s, index) => (
-                            <option key={index} value={s.kode_sub}>{s.nama_sub}</option>
+                        
+                        {/* --- PERBAIKAN UTAMA ADA DI SINI --- */}
+                        {/* Kita tidak bisa .map() sebuah OBJEK.
+                            Kita gunakan Object.entries() untuk mengubah 
+                            { "001": "Nama Sub" } 
+                            menjadi 
+                            [ ["001", "Nama Sub"] ] 
+                            yang bisa di-map().
+                        */}
+                        {Object.entries(selectedSubs).map(([kode_sub, nama_sub]) => (
+                            <option key={kode_sub} value={kode_sub}>{nama_sub}</option>
                         ))}
+                        {/* --- BATAS PERBAIKAN --- */}
+
                     </select>
                 </div>
                 
@@ -103,7 +115,8 @@ function TanahForm({ initialData, masterData, onSubmit, submitLoading, error }) 
                     <label htmlFor="asal_perolehan">Asal Perolehan</label>
                     <input type="text" id="asal_perolehan" name="asal_perolehan" className="form-control" list="asal-list" value={form.asal_perolehan} onChange={handleChange} required placeholder="Hibah / Pembelian" />
                     <datalist id="asal-list">
-                        {masterData?.asal?.map((a, index) => <option key={index} value={a.nama_asal} />)}
+                        {/* Perbaikan: Gunakan masterData.asal (bukan asal.nama_asal) */}
+                        {masterData?.asal?.map((a) => <option key={a.id} value={a.nama_asal} />)}
                     </datalist>
                 </div>
 
@@ -118,7 +131,8 @@ function TanahForm({ initialData, masterData, onSubmit, submitLoading, error }) 
                     <label htmlFor="status_sertifikat">Status Tanah (Hak)</label>
                     <input type="text" id="status_sertifikat" name="status_sertifikat" className="form-control" list="status-sertifikat-list" value={form.status_sertifikat} onChange={handleChange} placeholder="Hak Milik / HGB" />
                     <datalist id="status-sertifikat-list">
-                        {masterData?.statusSertifikat?.map((s, index) => <option key={index} value={s.nama_status} />)}
+                        {/* Perbaikan: Gunakan masterData.statusSertifikat */}
+                        {masterData?.statusSertifikat?.map((s) => <option key={s.id} value={s.nama_status} />)}
                     </datalist>
                 </div>
                 
@@ -128,7 +142,8 @@ function TanahForm({ initialData, masterData, onSubmit, submitLoading, error }) 
                     <label htmlFor="penggunaan">Penggunaan Lahan</label>
                     <input type="text" id="penggunaan" name="penggunaan" className="form-control" list="penggunaan-list" value={form.penggunaan} onChange={handleChange} placeholder="Sawah / Gedung" />
                     <datalist id="penggunaan-list">
-                        {masterData?.penggunaan?.map((p, index) => <option key={index} value={p.nama_penggunaan} />)}
+                        {/* Perbaikan: Gunakan masterData.penggunaan */}
+                        {masterData?.penggunaan?.map((p) => <option key={p.id} value={p.nama_penggunaan} />)}
                     </datalist>
                 </div>
                 <div className="form-group"><label htmlFor="koordinat">Koordinat (Lat, Long)</label><input type="text" id="koordinat" name="koordinat" className="form-control" value={form.koordinat} onChange={handleChange} placeholder="Klik peta atau isi manual" /></div>
@@ -137,7 +152,8 @@ function TanahForm({ initialData, masterData, onSubmit, submitLoading, error }) 
                     <label htmlFor="kondisi">Kondisi Aset</label>
                     <select id="kondisi" name="kondisi" className="form-control" value={form.kondisi} onChange={handleChange}>
                         <option value="Baik">Baik (B)</option>
-                        <option value="Kurang Baik">Kurang Baik (KB)</option>
+                        {/* Perbaikan: Value harus sesuai dengan migrasi backend */}
+                        <option value="Rusak Ringan">Rusak Ringan (RR)</option>
                         <option value="Rusak Berat">Rusak Berat (RB)</option>
                     </select>
                 </div>

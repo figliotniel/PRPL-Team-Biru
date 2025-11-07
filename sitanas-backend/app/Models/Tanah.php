@@ -5,27 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes; // Untuk fitur hapus (nonaktifkan)
-use App\Models\PemanfaatanTanah; // <-- 1. IMPORT Model yang benar
-use App\Models\Log;
-use App\Models\User;
 
-
-class TanahKasDesa extends Model
+class Tanah extends Model
 {
     use HasFactory, SoftDeletes;
-
-    /**
-     * Tentukan nama tabel secara eksplisit agar sesuai dengan file controller Anda
-     * (unique:tanah_kas_desa)
-     */
-    protected $table = 'tanah_kas_desa';
 
     /**
      * Kolom yang boleh diisi secara massal (mass assignable).
      */
     protected $fillable = [
         // Data Utama
-        'diinput_oleh', // ID Penginput (dari Auth::id())
+        'user_id', // ID Penginput
         'kode_barang',
         'nup',
         'asal_perolehan',
@@ -59,57 +49,38 @@ class TanahKasDesa extends Model
     ];
 
     /**
-     * Tentukan tipe data untuk kolom tertentu (Casting).
-     * Ini membantu Laravel otomatis mengubah data.
-     */
-    protected $casts = [
-        'tanggal_perolehan' => 'date',
-        'tanggal_sertifikat' => 'date',
-        'luas' => 'float',
-        'harga_perolehan' => 'float',
-    ];
-
-    /**
      * Relasi ke User (Penginput).
-     * Nama fungsi: 'penginput'
-     * Foreign Key: 'diinput_oleh'
      */
     public function penginput()
     {
-        return $this->belongsTo(User::class, 'diinput_oleh');
+        // 'user_id' adalah foreign key di tabel 'tanahs'
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     /**
-     * Relasi ke User (Validator Kades).
-     * Nama fungsi: 'validator'
-     * Foreign Key: 'validator_id'
+     * Relasi ke User (Validator).
      */
     public function validator()
     {
+        // 'validator_id' adalah foreign key di tabel 'tanahs'
         return $this->belongsTo(User::class, 'validator_id');
     }
 
     /**
      * Relasi ke Pemanfaatan (Satu aset punya banyak riwayat pemanfaatan).
-     * Nama fungsi: 'pemanfaatan'
-     * Model Terkait: 'PemanfaatanTanah'
-     * Foreign Key: 'tanah_id'
      */
     public function pemanfaatan()
     {
-        // --- PERBAIKAN DI BAWAH INI ---
-        return $this->hasMany(PemanfaatanTanah::class, 'tanah_id'); // <-- 2. Nama Model yang benar
+        return $this->hasMany(Pemanfaatan::class);
     }
 
     /**
      * Relasi ke Histori/Log (Satu aset punya banyak histori).
-     * Nama fungsi: 'histori'
-     * Model Terkait: 'Log'
-     * Foreign Key: 'tanah_id'
+     * Ini adalah relasi untuk 'data.histori' di DetailTanahPage.jsx
      */
     public function histori()
     {
-        // Pastikan Anda punya Model Log
-        return $this->hasMany(Log::class, 'tanah_id')->orderBy('timestamp', 'desc');
+        // 'tanah_id' adalah foreign key di tabel 'logs'
+        return $this->hasMany(Log::class, 'tanah_id');
     }
 }

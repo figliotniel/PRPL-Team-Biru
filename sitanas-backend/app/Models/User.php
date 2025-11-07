@@ -6,20 +6,23 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-// INI YANG PALING PENTING:
-use Laravel\Sanctum\HasApiTokens; // <-- 1. PASTIKAN BARIS INI ADA
+use Laravel\Sanctum\HasApiTokens;
+
+// --- TAMBAHKAN INI ---
+use App\Models\Role; // Import model Role
 
 class User extends Authenticatable
 {
-    // 2. PASTIKAN 'HasApiTokens' ADA DI DALAM 'use' INI
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes; 
 
     /**
      * The attributes that are mass assignable.
      */
+// ... existing code ...
     protected $fillable = [
         'nama_lengkap',
         'email',
+// ... existing code ...
         'password',
         'role_id',
     ];
@@ -27,6 +30,7 @@ class User extends Authenticatable
     /**
      * The attributes that should be hidden for serialization.
      */
+// ... existing code ...
     protected $hidden = [
         'password',
         'remember_token',
@@ -35,8 +39,18 @@ class User extends Authenticatable
     /**
      * The attributes that should be cast.
      */
+// ... existing code ...
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed', 
     ];
+
+    // --- TAMBAHKAN FUNGSI INI ---
+    /**
+     * Mendefinisikan relasi ke model Role.
+     */
+    public function role()
+    {
+        return $this->belongsTo(Role::class);
+    }
 }

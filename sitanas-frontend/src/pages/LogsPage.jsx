@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getLogs } from 'services/logService'; // <-- Path diperbaiki
-import { getUsers } from 'services/userService'; // <-- Path diperbaiki
-import 'assets/Layout.css'; // <-- Path diperbaiki
+import { getLogs } from '../services/logService'; // <-- Path diperbaiki
+import { getUsers } from '../services/userService'; // <-- Path diperbaiki
+import '../assets/Layout.css'; // <-- Path diperbaiki
 
 // Helper format tanggal
 const formatTimestamp = (timestamp) => {

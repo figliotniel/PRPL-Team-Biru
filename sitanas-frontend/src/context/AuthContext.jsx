@@ -1,4 +1,3 @@
-// src/context/AuthContext.jsx
 import React, { createContext, useState, useEffect } from 'react';
 import api from '../services/api'; // 1. Impor 'api' kita
 
@@ -29,25 +28,19 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     };
     checkUser();
-  }, [token]); // Tetap jalankan saat token berubah
+  }, [token]);
 
   const login = async (email, password) => {
-    // 3. Ganti simulasi 'login' dengan API call
     try {
-      // Panggil API /api/login
       const response = await api.post('/login', { email, password });
       
-      // Asumsi backend kirim: { token: "...", user: { ... } }
       const { token: newToken, user: newUser } = response.data;
-
-      // Simpan ke state dan localStorage
       localStorage.setItem('token', newToken);
       setToken(newToken);
       setUser(newUser);
 
     } catch (error) {
       console.error("Login gagal:", error);
-      // Lempar error agar LoginPage bisa menangkapnya
       throw new Error(error.response?.data?.message || "Email atau Password salah");
     }
   };

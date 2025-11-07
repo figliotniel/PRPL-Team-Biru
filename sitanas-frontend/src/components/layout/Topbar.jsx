@@ -1,9 +1,15 @@
 import React from 'react';
-import { useAuth } from 'hooks/useAuth'; // <-- 1. Path diubah ke absolut
-import 'assets/Layout.css'; // <-- 2. Path diubah ke absolut
+// DIUBAH: Path dikembalikan ke relatif, sama seperti Sidebar.jsx
+import { useAuth } from '../../hooks/useAuth'; 
+import '../../assets/Layout.css';
+// import defaultAvatar from '../../assets/default-avatar.png'; 
 
-const Topbar = () => {
-  const { user } = useAuth(); // <-- Panggil hook untuk ambil data user
+const Topbar = () => { // Hapus { user } dari props
+  
+  // Ambil user langsung dari hook
+  const { user } = useAuth(); 
+
+  // const avatar = user?.foto_profil || defaultAvatar;
 
   return (
     <header className="topbar">
@@ -12,6 +18,7 @@ const Topbar = () => {
           <span>
             Halo, <strong>{user?.nama_lengkap || 'Pengguna'}</strong>
           </span>
+          {/* <img src={avatar} alt="Avatar" className="profile-avatar" /> */}
           <i className="fas fa-user-circle" style={{fontSize: "32px", marginLeft: "10px"}}></i>
         </div>
       </div>
