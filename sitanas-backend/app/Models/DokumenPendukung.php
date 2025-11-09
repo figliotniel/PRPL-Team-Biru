@@ -5,12 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class PemanfaatanTanah extends Model
+class DokumenPendukung extends Model
 {
     use HasFactory;
 
     // Tentukan nama tabel secara eksplisit
-    protected $table = 'pemanfaatan_tanah';
+    protected $table = 'dokumen_pendukung';
 
     /**
      * Tentukan field yang boleh diisi (mass assignable).
@@ -18,25 +18,14 @@ class PemanfaatanTanah extends Model
      */
     protected $fillable = [
         'tanah_id',
-        'nama_pemanfaat',
-        'bentuk_pemanfaatan',
-        'tanggal_mulai',
-        'tanggal_selesai',
-        'keterangan',
-    ];
-
-    /**
-     * Tentukan field yang harus di-cast ke tipe data tertentu.
-     * Ini penting untuk tanggal.
-     */
-    protected $casts = [
-        'tanggal_mulai' => 'date',
-        'tanggal_selesai' => 'date',
+        'nama_dokumen',
+        'jenis_dokumen', // misal: Sertifikat, Peta, Akta
+        'file_path',
+        'url',
     ];
 
     /**
      * Relasi 'belongsTo' ke TanahKasDesa.
-     * (Setiap data pemanfaatan dimiliki oleh satu data tanah)
      */
     public function tanahKasDesa()
     {

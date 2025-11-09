@@ -14,15 +14,15 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         User::create([
-            'nama_lengkap' => 'Admin Utama',
-            'email' => 'admin@desa.id', // Gunakan email ini untuk login
+            'nama_lengkap' => 'Admin',
+            'email' => 'admin@sitanas.com', // Gunakan email ini untuk login
             'password' => Hash::make('password'), // Password: 'password'
-            'role_id' => 1, // KRUSIAL: role_id 1 untuk Admin
+            'role_id' => 1,
         ]);
         
         User::create([
             'nama_lengkap' => 'Kepala Desa Contoh',
-            'email' => 'kades@desa.id',
+            'email' => 'kades@sitanas.com',
             'password' => Hash::make('password'),
             'role_id' => 2, 
         ]);

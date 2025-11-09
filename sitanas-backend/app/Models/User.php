@@ -53,4 +53,9 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Role::class);
     }
+
+    public function logs()
+    {
+        return $this->hasMany(LogAktivitas::class, 'user_id');
+    }
 }

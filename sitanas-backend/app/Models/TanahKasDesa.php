@@ -4,8 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes; // Untuk fitur hapus (nonaktifkan)
-use App\Models\PemanfaatanTanah; // <-- 1. IMPORT Model yang benar
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\PemanfaatanTanah;
 use App\Models\Log;
 use App\Models\User;
 
@@ -97,8 +97,12 @@ class TanahKasDesa extends Model
      */
     public function pemanfaatan()
     {
-        // --- PERBAIKAN DI BAWAH INI ---
-        return $this->hasMany(PemanfaatanTanah::class, 'tanah_id'); // <-- 2. Nama Model yang benar
+        return $this->hasMany(PemanfaatanTanah::class, 'tanah_id');
+    }
+
+    public function dokumen()
+    {
+        return $this->hasMany(DokumenPendukung::class, 'tanah_id');
     }
 
     /**

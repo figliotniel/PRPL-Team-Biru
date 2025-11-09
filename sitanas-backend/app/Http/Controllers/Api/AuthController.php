@@ -2,71 +2,68 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\User;
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+
+// 1. Tambahkan import (Use) yang diperlukan
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Models\User;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
     /**
-     * Menangani permintaan login API.
-     * POST /api/login
+     * Handle user login.
      */
     public function login(Request $request)
     {
-        // 1. Validasi input
+        // 2. Validasi input dari frontend
         $request->validate([
             'email' => 'required|email',
             'password' => 'required',
         ]);
 
-        // 2. Cari user berdasarkan email
-        // Kita pakai with('role') agar data role (misal: "Admin Desa") ikut terkirim
-        $user = User::with('role')->where('email', $request->email)->first();
+        // 3. Coba cari user berdasarkan email
+        $user = User::where('email', $request->email)->first();
 
-        // 3. Cek User dan Password
-        // Cek apakah user-nya ada DAN password-nya cocok
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            // Jika tidak ada atau password salah, kirim 401
+        // 4. Cek user dan password
+        //    Gunakan Hash::check untuk membandingkan password
+        if (! $user || ! Hash::check($request->password, $user->password)) {
+            // Jika gagal, kirim error 401 (Unauthorized)
             return response()->json([
-                'message' => 'Email atau Password salah'
+                'message' => 'Email atau password salah.'
             ], 401);
         }
 
-        // 4. Buat Token
-        // Jika lolos, login berhasil
+        // 5. Jika berhasil, buat token API (Sanctum)
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // 5. Kembalikan data ke Frontend
+        // 6. Kembalikan respon sesuai format yang diharapkan frontend
+        //    (user dan token)
         return response()->json([
+            'message' => 'Login berhasil',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                // Kita juga bisa tambahkan role jika perlu
+                // 'role' => $user->role->name 
+            ],
             'token' => $token,
-            'user' => $user // Kita kirim semua data user (termasuk role)
         ], 200);
     }
 
     /**
-     * Menangani permintaan logout API.
-     * POST /api/logout
+     * Handle user logout.
      */
     public function logout(Request $request)
     {
-        // Hapus token yang sedang dipakai
+        // Hapus token yang sedang digunakan untuk otentikasi
         $request->user()->currentAccessToken()->delete();
-        return response()->json(['message' => 'Berhasil logout'], 200);
-    }
 
-    /**
-     * Mengambil data user yang sedang login.
-     * GET /api/user
-     */
-    public function user(Request $request)
-    {
-        // Ambil data user yang sedang login (via token)
-        // Kita pakai with('role') agar data role selalu update
-        $user = User::with('role')->find($request->user()->id);
-        
-        return response()->json($user);
+        return response()->json([
+            'message' => 'Logout berhasil'
+        ], 200);
     }
 }
