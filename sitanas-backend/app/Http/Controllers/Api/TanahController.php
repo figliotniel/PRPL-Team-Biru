@@ -42,7 +42,6 @@ class TanahController extends Controller
             });
         }
         
-        // Menggunakan paginate(10) untuk respons paginasi yang efisien
         $tanahList = $query->with('penginput:id,nama_lengkap')->orderBy('created_at', 'desc')->paginate(10);
 
         return $tanahList;
