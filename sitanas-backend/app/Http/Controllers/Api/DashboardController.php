@@ -3,37 +3,43 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Models\TanahKasDesa; // Asumsi Model ini ada
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB; // WAJIB untuk query statistik
 
 class DashboardController extends Controller
 {
     /**
-     * Mengambil data statistik dashboard.
+     * Menampilkan statistik ringkasan dashboard.
+     * Rute: GET /api/stats (Terlindungi)
      */
-    public function stats(Request $request)
+    public function stats()
     {
-        // Ambil data dari tabel tanah_kas_desa
-        $total_aset = DB::table('tanah_kas_desa')->count();
-
-        $total_luas = DB::table('tanah_kas_desa')
-            ->where('status_validasi', 'Disetujui')
-            ->sum('luas');
-
-        $aset_diproses = DB::table('tanah_kas_desa')
-            ->where('status_validasi', 'Diproses')
-            ->count();
+        try {
+            // Menghitung statistik
+            $totalUsers = User::count();
+            // Ambil hanya user yang Aktif (soft delete null)
+            $activeUsers = User::whereNull('deleted_at')->count(); 
             
-        $aset_disetujui = DB::table('tanah_kas_desa')
-            ->where('status_validasi', 'Disetujui')
-            ->count();
+            // Asumsi model TanahKasDesa sudah dibuat dan diimport
+            $totalTanah = TanahKasDesa::count();
+            // Asumsi ada kolom 'luas_total' di tabel tanah_kas_desa
+            $totalLuasHektar = (float)TanahKasDesa::sum('luas_total') / 10000; 
 
-        // Kembalikan JSON (sesuai yang diharapkan DashboardPage.jsx)
-        return response()->json([
-            'total_aset' => $total_aset,
-            'total_luas' => (float) $total_luas, 
-            'aset_diproses' => $aset_diproses,
-            'aset_disetujui' => $aset_disetujui,
-        ]);
+            // Mengembalikan data ringkasan
+            return response()->json([
+                'total_users' => $totalUsers,
+                'active_users' => $activeUsers,
+                'total_tanah_kas_desa' => $totalTanah,
+                'total_luas_hektar' => number_format($totalLuasHektar, 2, ',', '.') . ' Ha', // Format ke Hektar
+            ]);
+            
+        } catch (\Exception $e) {
+            // Tangani error jika Model/tabel belum ada
+            return response()->json([
+                'message' => 'Gagal memuat statistik. Pastikan semua tabel database sudah dimigrasi dan diisi.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

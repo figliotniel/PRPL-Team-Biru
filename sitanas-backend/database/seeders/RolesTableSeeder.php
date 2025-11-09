@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB; // 1. Impor DB facade
+use Illuminate\Support\Facades\DB;
 
 class RolesTableSeeder extends Seeder
 {
@@ -12,12 +12,11 @@ class RolesTableSeeder extends Seeder
      */
     public function run(): void
     {
-        // 2. Hapus data lama (jika ada) agar tidak duplikat
-        DB::table('roles')->truncate();
-
-        // 3. Masukkan data baru
+        // Pastikan tabelnya kosong sebelum diisi (Opsional, tapi aman)
+        // DB::table('roles')->truncate(); 
+        
         DB::table('roles')->insert([
-            ['id' => 1, 'nama_role' => 'Admin Desa'],
+            ['id' => 1, 'nama_role' => 'Administrator Desa'],
             ['id' => 2, 'nama_role' => 'Kepala Desa'],
             ['id' => 3, 'nama_role' => 'BPD (Pengawas)'],
         ]);

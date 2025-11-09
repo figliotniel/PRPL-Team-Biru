@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\User;
-use Illuminate\Support\Facades\Hash; // Kita tetap butuh ini untuk Tinker, tapi tidak di sini
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
@@ -13,24 +13,18 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        // Hapus data user lama (jika ada)
-        User::truncate();
-
-        // Buat user Admin baru
         User::create([
             'nama_lengkap' => 'Admin Utama',
-            'email' => 'admin@gmail.com',
-            
-            // INI PERBAIKANNYA:
-            // Jangan di-hash manual. Biarkan 'hashed' cast di Model User
-            // yang mengurusnya.
-            'password' => 'password', // <-- BERIKAN PLAINTEXT "password"
-            
-            'role_id' => 1,
-            'created_at' => now(),
-            'updated_at' => now(),
+            'email' => 'admin@desa.id', // Gunakan email ini untuk login
+            'password' => Hash::make('password'), // Password: 'password'
+            'role_id' => 1, // KRUSIAL: role_id 1 untuk Admin
         ]);
         
-        // (User admin@coba.com yang tadi kita buat di Tinker tidak usah dimasukkan ke seeder)
+        User::create([
+            'nama_lengkap' => 'Kepala Desa Contoh',
+            'email' => 'kades@desa.id',
+            'password' => Hash::make('password'),
+            'role_id' => 2, 
+        ]);
     }
 }
