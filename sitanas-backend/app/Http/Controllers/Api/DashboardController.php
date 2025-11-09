@@ -4,55 +4,77 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-
-use App\Models\User;
-use App\Models\TanahKasDesa;
-use App\Models\LogAktivitas; // Import ini sudah ada
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
     /**
-     * Mengambil statistik utama untuk dashboard.
-     * (Biarkan fungsi ini seperti yang sudah kita buat)
+     * Mengambil data statistik dashboard.
      */
-    public function getStats()
+    public function stats(Request $request)
     {
-        $totalUsers = User::count();
-        $totalTanah = TanahKasDesa::count();
-        $totalLuas = TanahKasDesa::sum('luas');
-        $totalAdmin = User::where('role_id', 1)->count(); 
+        try {
+            // Ambil data dari tabel tanah_kas_desa
+            $total_aset = DB::table('tanah_kas_desa')->count();
 
-        return response()->json([
-            'total_users' => $totalUsers,
-            'total_tanah' => $totalTanah,
-            'total_luas' => (float) $totalLuas,
-            'total_admin' => $totalAdmin,
-        ]);
+            $total_luas = DB::table('tanah_kas_desa')
+                ->where('status_validasi', 'Disetujui')
+                ->sum('luas');
+
+            $aset_diproses = DB::table('tanah_kas_desa')
+                ->where('status_validasi', 'Diproses')
+                ->count();
+                
+            $aset_disetujui = DB::table('tanah_kas_desa')
+                ->where('status_validasi', 'Disetujui')
+                ->count();
+
+            // Kembalikan JSON
+            return response()->json([
+                'total_aset' => $total_aset,
+                'total_luas' => (float) $total_luas, 
+                'aset_diproses' => $aset_diproses,
+                'aset_disetujui' => $aset_disetujui,
+            ], 200);
+
+        } catch (\Exception $e) {
+            // Log error untuk debugging
+            Log::error('Error in DashboardController@stats: ' . $e->getMessage());
+            
+            return response()->json([
+                'message' => 'Gagal memuat data statistik',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
-     * Mengambil aktivitas terbaru.
-     * (FUNGSI INI YANG KITA UBAH)
+     * Mengambil aktivitas terbaru (OPTIONAL - untuk dashboard)
      */
-    public function getRecentActivities()
+    public function recentActivities(Request $request)
     {
-        // 1. HAPUS KODE LAMA ('$activities = []')
-        
-        // 2. GANTI DENGAN QUERY ASLI:
-        //    'with('user')' -> mengambil relasi user (nama, email, dll)
-        //    'latest()' -> mengurutkan dari yang terbaru (created_at DESC)
-        //    'take(5)' -> membatasi hanya 5 log teratas
         try {
-            $activities = LogAktivitas::with('user') 
-                                      ->latest() 
-                                      ->take(5) 
-                                      ->get();
+            $activities = DB::table('log_aktivitas')
+                ->join('users', 'log_aktivitas.user_id', '=', 'users.id')
+                ->select(
+                    'log_aktivitas.id',
+                    'log_aktivitas.aksi',
+                    'log_aktivitas.deskripsi',
+                    'log_aktivitas.created_at',
+                    'users.nama_lengkap as user_name'
+                )
+                ->orderBy('log_aktivitas.created_at', 'desc')
+                ->limit(10)
+                ->get();
+
+            return response()->json($activities, 200);
+
         } catch (\Exception $e) {
-            // Jika terjadi error (misal tabel belum ada), kirim array kosong
-            return response()->json([], 500);
+            Log::error('Error in DashboardController@recentActivities: ' . $e->getMessage());
+            
+            // Return empty array jika tabel belum ada
+            return response()->json([], 200);
         }
-                                  
-        // 3. Kembalikan data log
-        return response()->json($activities);
     }
 }
