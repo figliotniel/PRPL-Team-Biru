@@ -8,25 +8,19 @@ use Illuminate\Database\Eloquent\Model;
 class LogAktivitas extends Model
 {
     use HasFactory;
-
-    // Nama tabel (jika berbeda dari 'log_aktivitas')
-    // protected $table = 'log_aktivitas';
-
-    /**
-     * Tentukan field yang boleh diisi (mass assignable).
-     * Sesuai dengan migrasi Anda.
-     */
+    protected $table = 'log_aktivitas';
     protected $fillable = [
         'user_id',
         'deskripsi',
+        'aksi',
     ];
 
-    /**
-     * Tentukan relasi 'belongsTo' ke User.
-     * (Setiap log dimiliki oleh satu user)
-     */
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime'
+    ];
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 }
