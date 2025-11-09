@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\AdminMiddleware; // <-- WAJIB: Import class middleware Anda
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,15 +15,17 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         
         // 1. INI ADALAH BLOK YANG MENGATUR PENGECUALIAN CSRF
-        // Kita secara eksplisit memberitahu Laravel untuk TIDAK memeriksa token CSRF
-        // pada semua rute yang dimulai dengan 'api/'.
         $middleware->validateCsrfTokens(except: [
-            'api/*', // <-- MENGECUALIKAN SEMUA RUTE DI API.PHP
+            'api/*', // MENGECUALIKAN SEMUA RUTE DI API.PHP
         ]);
         
         // 2. Aktifkan Sanctum State
-        // Ini WAJIB ada dan HANYA ini yang diperlukan untuk sesi API
         $middleware->statefulApi(); 
+        
+        // 3. REGISTRASI ALIAS MIDDLEWARE UNTUK ROUTE GROUPING
+        $middleware->alias([
+            'admin' => AdminMiddleware::class, // <-- BARIS BARU: Daftarkan 'admin' alias
+        ]);
 
     })
     ->withExceptions(function (Exceptions $exceptions) {

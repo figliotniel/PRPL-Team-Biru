@@ -3,242 +3,269 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\TanahKasDesa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
-use App\Models\TanahKasDesa;
-use App\Models\PemanfaatanTanah;
-use App\Models\Log;
-use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str; // WAJIB: Import Str untuk UUID
 
 class TanahController extends Controller
 {
     /**
-     * Helper untuk mencatat log
-     */
-    private function logActivity($tanah_id, $aksi, $deskripsi)
-    {
-        Log::create([
-            'tanah_id' => $tanah_id,
-            'user_id' => Auth::id(),
-            'aksi' => $aksi,
-            'deskripsi' => $deskripsi,
-            'ip_address' => request()->ip(),
-        ]);
-    }
-
-    /**
      * Menampilkan daftar aset tanah dengan paginasi dan filter.
-     * GET /api/tanah
      */
     public function index(Request $request)
     {
         $status = $request->query('status');
         $search = $request->query('search');
+        $user = Auth::user();
 
         $query = TanahKasDesa::query();
 
-        // Relasi ke penginput
-        $query->with('penginput:id,nama_lengkap');
-
-        if ($status) {
-            $query->where('status_validasi', $status);
+        // BPD (Role ID 3) hanya bisa lihat yang Disetujui
+        if ($user->role_id === 3) {
+            $query->where('status_validasi', 'Disetujui');
+        } else {
+            // Admin & Kades bisa filter
+            if ($status) {
+                $query->where('status_validasi', $status);
+            }
         }
 
+        // Filter pencarian - PERBAIKAN SINTAKSIS DI BLOK INI
         if ($search) {
             $query->where(function ($q) use ($search) {
-                $q->where('kode_barang', 'like', "%{$search}%")
-                  ->orWhere('asal_perolehan', 'like', "%{$search}%")
-                  ->orWhere('lokasi', 'like', "%{$search}%")
-                  ->orWhere('nomor_sertifikat', 'like', "%{$search}%");
+                $q->where('kode_barang', 'like', "%{$search}%") // Hapus '\'
+                  ->orWhere('asal_perolehan', 'like', "%{$search}%") // Hapus '\'
+                  ->orWhere('lokasi', 'like', "%{$search}%") // Hapus '\'
+                  ->orWhere('nomor_sertifikat', 'like', "%{$search}%"); // Hapus '\'
             });
         }
-
-        $tanahList = $query->orderBy('created_at', 'desc')->paginate(10);
+        
+        // Menggunakan paginate(10) untuk respons paginasi yang efisien
+        $tanahList = $query->with('penginput:id,nama_lengkap')->orderBy('created_at', 'desc')->paginate(10);
 
         return $tanahList;
     }
 
     /**
-     * Menampilkan data detail aset tunggal.
-     * GET /api/tanah/{id}
+     * Tambah aset tanah baru (Admin only).
+     */
+    public function store(Request $request)
+    {
+        // 1. Validasi Data
+        $validated = $request->validate([
+            // PERBAIKAN UTAMA: Dibuat nullable dan tidak ada UNIQUE di validasi
+            'kode_barang' => 'nullable|string|max:100', 
+            'nup' => 'nullable|string|max:50',
+            'asal_perolehan' => 'required|string',
+            'tanggal_perolehan' => 'nullable|date',
+            'harga_perolehan' => 'nullable|numeric|min:0',
+            'nomor_sertifikat' => 'nullable|string|max:100',
+            'status_sertifikat' => 'nullable|string|max:100',
+            'luas' => 'required|numeric|min:0',
+            'lokasi' => 'nullable|string',
+            'penggunaan' => 'nullable|string',
+            'koordinat' => 'nullable|string|max:100',
+            'kondisi' => 'nullable|in:Baik,Rusak Ringan,Rusak Berat',
+            'batas_utara' => 'nullable|string',
+            'batas_timur' => 'nullable|string',
+            'batas_selatan' => 'nullable|string',
+            'batas_barat' => 'nullable|string',
+            'keterangan' => 'nullable|string',
+        ]);
+        
+        // Ambil data untuk disimpan
+        $dataToStore = $validated;
+        
+        // 2. Logika Pembuatan Kode Barang Unik Otomatis
+        // Jika kode_barang kosong di form, kita buat UUID sementara
+        // Jika ada isinya, kita biarkan dan asumsikan user sudah memastikan unik
+        if (empty($dataToStore['kode_barang'])) {
+             // Membuat kode unik menggunakan UUID (Universally Unique Identifier)
+             $dataToStore['kode_barang'] = 'TKS-'.Str::uuid()->toString();
+        }
+
+
+        // Tambahkan data non-form
+        $dataToStore['harga_perolehan'] = $dataToStore['harga_perolehan'] ?? 0;
+        $dataToStore['kondisi'] = $dataToStore['kondisi'] ?? 'Baik';
+        $dataToStore['status_validasi'] = 'Diproses';
+        $dataToStore['diinput_oleh'] = Auth::id();
+
+
+        try {
+            // 3. Simpan Data
+            $tanah = TanahKasDesa::create($dataToStore);
+
+            // 4. Log Aktivitas
+            DB::table('log_aktivitas')->insert([
+                'user_id' => Auth::id(),
+                'aksi' => 'Tambah Aset',
+                'deskripsi' => "Menambahkan aset tanah: {$tanah->asal_perolehan} (Kode: {$tanah->kode_barang})",
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return response()->json([
+                'message' => 'Aset tanah berhasil ditambahkan. Kode Barang: ' . $tanah->kode_barang,
+                'data' => $tanah
+            ], 201);
+        } catch (\Exception $e) {
+            // Jika ada error lain (misalnya relasi FAILED), kirim error 500
+            DB::error('Gagal menyimpan data tanah: ' . $e->getMessage());
+            return response()->json(['message' => 'Server error: Gagal menyimpan data.'], 500);
+        }
+    }
+
+    /**
+     * Tampilkan detail aset tanah.
      */
     public function show($id)
     {
-        $tanah = TanahKasDesa::with([
-            'penginput:id,nama_lengkap',
-            'validator:id,nama_lengkap',
-            'pemanfaatan', // Menggunakan nama relasi 'pemanfaatan'
-            'histori.user:id,nama_lengkap',
-        ])
-        ->findOrFail($id);
+        $tanah = TanahKasDesa::with('penginput:id,nama_lengkap')->findOrFail($id);
+
+        // BPD hanya bisa lihat yang Disetujui
+        if (Auth::user()->role_id === 3 && $tanah->status_validasi !== 'Disetujui') {
+            return response()->json(['message' => 'Akses ditolak'], 403);
+        }
 
         return response()->json($tanah);
     }
 
     /**
-     * Menyimpan data aset tanah baru. (Admin Only)
-     * POST /api/tanah
-     */
-    public function store(Request $request)
-    {
-        try {
-            $validated = $request->validate([
-                'kode_barang' => 'required|string|max:100|unique:tanah_kas_desa,kode_barang',
-                'luas' => 'required|numeric|min:0.01',
-                'asal_perolehan' => 'required|string|max:255',
-                'tanggal_perolehan' => 'nullable|date',
-                'harga_perolehan' => 'nullable|numeric|min:0',
-                'bukti_perolehan' => 'nullable|string|max:255',
-                'nomor_sertifikat' => 'nullable|string|max:100',
-                'tanggal_sertifikat' => 'nullable|date',
-                'status_sertifikat' => 'nullable|string|max:100',
-                'penggunaan' => 'nullable|string|max:255',
-                'koordinat' => 'nullable|string|max:100',
-                'kondisi' => 'required|in:Baik,Rusak Ringan,Rusak Berat',
-                'lokasi' => 'nullable|string',
-                'batas_utara' => 'nullable|string|max:255',
-                'batas_timur' => 'nullable|string|max:255',
-                'batas_selatan' => 'nullable|string|max:255',
-                'batas_barat' => 'nullable|string|max:255',
-                'keterangan' => 'nullable|string',
-                'nup' => 'nullable|string|max:50',
-            ]);
-
-            // Tambahkan field sistem
-            $validated['diinput_oleh'] = Auth::id();
-            $validated['status_validasi'] = 'Diproses';
-
-            $tanah = TanahKasDesa::create($validated);
-
-            // Log Aktivitas
-            $this->logActivity($tanah->id, 'Tambah', 'Aset baru telah ditambahkan.');
-
-            return response()->json(['message' => 'Data tanah berhasil ditambahkan dan menunggu validasi.', 'tanah_id' => $tanah->id], 201);
-
-        } catch (ValidationException $e) {
-            return response()->json(['errors' => $e->errors()], 422);
-        } catch (\Exception $e) {
-            // Tangkap error lainnya
-            return response()->json(['message' => 'Gagal menyimpan data: ' . $e->getMessage()], 500);
-        }
-    }
-
-    /**
-     * Mengupdate data aset tanah. (Admin Only)
-     * PUT /api/tanah/{id}
+     * Update aset tanah (Admin only).
      */
     public function update(Request $request, $id)
     {
         $tanah = TanahKasDesa::findOrFail($id);
 
-        try {
-            $validated = $request->validate([
-                // Kode barang unik, tapi abaikan ID saat ini
-                'kode_barang' => 'required|string|max:100|unique:tanah_kas_desa,kode_barang,' . $id,
-                'luas' => 'required|numeric|min:0.01',
-                'asal_perolehan' => 'required|string|max:255',
-                'tanggal_perolehan' => 'nullable|date',
-                'harga_perolehan' => 'nullable|numeric|min:0',
-                'bukti_perolehan' => 'nullable|string|max:255',
-                'nomor_sertifikat' => 'nullable|string|max:100',
-                'tanggal_sertifikat' => 'nullable|date',
-                'status_sertifikat' => 'nullable|string|max:100',
-                'penggunaan' => 'nullable|string|max:255',
-                'koordinat' => 'nullable|string|max:100',
-                'kondisi' => 'required|in:Baik,Rusak Ringan,Rusak Berat',
-                'lokasi' => 'nullable|string',
-                'batas_utara' => 'nullable|string|max:255',
-                'batas_timur' => 'nullable|string|max:255',
-                'batas_selatan' => 'nullable|string|max:255',
-                'batas_barat' => 'nullable|string|max:255',
-                'keterangan' => 'nullable|string',
-                'nup' => 'nullable|string|max:50',
-            ]);
+        $request->validate([
+            'kode_barang' => 'nullable|string|max:100',
+            'nup' => 'nullable|string|max:50',
+            'asal_perolehan' => 'required|string',
+            'tanggal_perolehan' => 'nullable|date',
+            'harga_perolehan' => 'nullable|numeric|min:0',
+            'nomor_sertifikat' => 'nullable|string|max:100',
+            'status_sertifikat' => 'nullable|string|max:100',
+            'luas' => 'required|numeric|min:0',
+            'lokasi' => 'nullable|string',
+            'penggunaan' => 'nullable|string',
+            'koordinat' => 'nullable|string|max:100',
+            'kondisi' => 'nullable|in:Baik,Rusak Ringan,Rusak Berat',
+            'batas_utara' => 'nullable|string',
+            'batas_timur' => 'nullable|string',
+            'batas_selatan' => 'nullable|string',
+            'batas_barat' => 'nullable|string',
+            'keterangan' => 'nullable|string',
+        ]);
 
-            $tanah->update($validated);
+        $tanah->update($request->all());
 
-            // Log Aktivitas
-            $this->logActivity($tanah->id, 'Update', 'Data aset telah diperbarui.');
+        // Log aktivitas
+        DB::table('log_aktivitas')->insert([
+            'user_id' => Auth::id(),
+            'aksi' => 'Edit Aset',
+            'deskripsi' => "Mengedit aset tanah: {$tanah->asal_perolehan}",
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
-            return response()->json(['message' => 'Data tanah berhasil diperbarui.', 'tanah' => $tanah]);
-
-        } catch (ValidationException $e) {
-            return response()->json(['errors' => $e->errors()], 422);
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'Gagal memperbarui data: ' . $e->getMessage()], 500);
-        }
+        return response()->json([
+            'message' => 'Aset tanah berhasil diperbarui',
+            'data' => $tanah
+        ]);
     }
 
     /**
-     * Menghapus (Soft Delete) data aset tanah. (Admin Only)
-     * DELETE /api/tanah/{id}
+     * Hapus aset tanah (Admin only).
      */
     public function destroy($id)
     {
         $tanah = TanahKasDesa::findOrFail($id);
-        
-        // Log aktivitas sebelum dihapus
-        $this->logActivity($tanah->id, 'Hapus', 'Aset telah dihapus (soft delete).');
+        $asal = $tanah->asal_perolehan;
 
-        $tanah->delete(); // Soft delete
+        $tanah->delete();
 
-        return response()->json(['message' => 'Aset berhasil dihapus (nonaktif).']);
+        // Log aktivitas
+        DB::table('log_aktivitas')->insert([
+            'user_id' => Auth::id(),
+            'aksi' => 'Hapus Aset',
+            'deskripsi' => "Menghapus aset tanah: {$asal}",
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Aset tanah berhasil dihapus'
+        ]);
     }
 
     /**
-     * Validasi aset oleh Kades. (Kades Only)
-     * POST /api/tanah/{id}/validate
+     * Setujui aset tanah (Kades only).
      */
-    public function validateTanah(Request $request, $id)
+    public function approve(Request $request, $id)
     {
         $tanah = TanahKasDesa::findOrFail($id);
 
-        $validated = $request->validate([
-            'status' => 'required|in:Disetujui,Ditolak',
-            'catatan_validasi' => 'nullable|string',
-        ]);
-
-        // Kades (Role 2) tidak boleh memvalidasi asetnya sendiri (jika dia admin)
-        if ($tanah->diinput_oleh == Auth::id()) {
+        if ($tanah->status_validasi !== 'Diproses') {
+            return response()->json(['message' => 'Aset ini sudah divalidasi'], 400);
         }
 
-        $tanah->status_validasi = $validated['status'];
-        $tanah->catatan_validasi = $validated['catatan_validasi'];
-        $tanah->validator_id = Auth::id(); // Catat siapa yang validasi
-        $tanah->save();
+        $tanah->update([
+            'status_validasi' => 'Disetujui',
+            'divalidasi_oleh' => Auth::id(),
+            'catatan_validasi' => $request->catatan ?? null,
+        ]);
 
-        // Log Aktivitas
-        $this->logActivity($tanah->id, 'Validasi', 'Aset telah di-' . $validated['status'] . '.');
+        // Log aktivitas
+        DB::table('log_aktivitas')->insert([
+            'user_id' => Auth::id(),
+            'aksi' => 'Setujui Aset',
+            'deskripsi' => "Menyetujui aset tanah: {$tanah->asal_perolehan}",
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
-        return response()->json(['message' => 'Status aset berhasil diperbarui menjadi ' . $validated['status']]);
+        return response()->json([
+            'message' => 'Aset tanah berhasil disetujui',
+            'data' => $tanah
+        ]);
     }
 
     /**
-     * Menambah data pemanfaatan aset. (Admin Only)
-     * POST /api/tanah/{id}/pemanfaatan
+     * Tolak aset tanah (Kades only).
      */
-    public function storePemanfaatan(Request $request, $id)
+    public function reject(Request $request, $id)
     {
-        $tanah = TanahKasDesa::findOrFail($id);
-
-        $validated = $request->validate([
-            'bentuk_pemanfaatan' => 'required|string|max:255',
-            'pihak_ketiga' => 'required|string|max:255',
-            'tanggal_mulai' => 'required|date',
-            'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'nilai_kontribusi' => 'required|numeric|min:0',
-            'status_pembayaran' => 'required|string|max:100',
+        $request->validate([
+            'catatan' => 'required|string',
         ]);
 
-        // Tambahkan ID tanah dan ID user
-        $validated['tanah_id'] = $tanah->id;
-        $validated['user_id'] = Auth::id(); // Catat siapa yang input
+        $tanah = TanahKasDesa::findOrFail($id);
 
-        $pemanfaatan = PemanfaatanTanah::create($validated);
-        // Log Aktivitas
-        $this->logActivity($tanah->id, 'Pemanfaatan', 'Riwayat pemanfaatan baru ditambahkan.');
+        if ($tanah->status_validasi !== 'Diproses') {
+            return response()->json(['message' => 'Aset ini sudah divalidasi'], 400);
+        }
 
-        return response()->json(['message' => 'Data pemanfaatan berhasil ditambahkan.', 'data' => $pemanfaatan], 201);
+        $tanah->update([
+            'status_validasi' => 'Ditolak',
+            'divalidasi_oleh' => Auth::id(),
+            'catatan_validasi' => $request->catatan,
+        ]);
+
+        // Log aktivitas
+        DB::table('log_aktivitas')->insert([
+            'user_id' => Auth::id(),
+            'aksi' => 'Tolak Aset',
+            'deskripsi' => "Menolak aset tanah: {$tanah->asal_perolehan}",
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Aset tanah ditolak',
+            'data' => $tanah
+        ]);
     }
 }
