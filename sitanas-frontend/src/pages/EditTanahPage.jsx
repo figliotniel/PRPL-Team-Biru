@@ -1,8 +1,8 @@
 // src/pages/EditTanahPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getTanahDetail, getMasterData, updateTanah } from '../services/tanahService';
-import TanahForm from '../components/common/TanahForm'; // <-- Impor form
+import { getTanahById, getAllTanah, updateTanah } from '../services/tanahService';
+import TanahForm from '../components/common/TanahForm';
 import { useAuth } from '../hooks/useAuth';
 
 function EditTanahPage() {

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { getTanahDetail, validateTanah, createPemanfaatan } from '../services/tanahService'; // <-- Path diperbaiki
-import { useAuth } from '../hooks/useAuth'; // <-- Path diperbaiki
+import { getTanahById } from '../services/tanahService';
+import { createPemanfaatan } from '../services/pemanfaatanTanahService';
+import { useAuth } from '../hooks/useAuth';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';

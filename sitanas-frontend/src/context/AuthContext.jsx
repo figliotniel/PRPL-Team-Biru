@@ -1,5 +1,7 @@
+// src/context/AuthContext.jsx
 import React, { createContext, useState, useEffect } from 'react';
-import api from '../services/api'; // 1. Impor 'api' kita
+import { useNavigate } from 'react-router-dom'; // <-- 1. TAMBAHAN
+import api from '../services/api'; 
 
 export const AuthContext = createContext(null);
 
@@ -7,20 +9,19 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
+  
+  const navigate = useNavigate(); // <-- 2. TAMBAHAN
 
   useEffect(() => {
-    // 2. Ganti simulasi 'checkUser' dengan API call
+    // ... (Fungsi useEffect Anda sudah benar, biarkan saja)
     const checkUser = async () => {
       if (token) {
         try {
-          // 'api' sudah otomatis pasang token di header
-          // Kita pakai /user (sesuai diskusi)
           const response = await api.get('/user'); 
-          setUser(response.data); // Asumsi backend kirim data user
+          setUser(response.data);
         } catch (error) {
-          // Token tidak valid atau error server
           console.error("Token tidak valid:", error);
-          localStorage.removeItem('token'); // Hapus token palsu
+          localStorage.removeItem('token');
           setToken(null);
           setUser(null);
         }
@@ -33,11 +34,13 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const response = await api.post('/login', { email, password });
-      
       const { token: newToken, user: newUser } = response.data;
+
       localStorage.setItem('token', newToken);
       setToken(newToken);
       setUser(newUser);
+      
+      navigate('/dashboard'); // <-- 3. TAMBAHAN INI YANG PALING PENTING
 
     } catch (error) {
       console.error("Login gagal:", error);
@@ -46,16 +49,17 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    // 4. Panggil API logout (opsional tapi bagus)
+    // ... (Fungsi logout Anda sudah benar)
     try {
       await api.post('/logout');
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      // Bersihkan data di frontend (WAJIB)
       setUser(null);
       setToken(null);
       localStorage.removeItem('token');
+      // Arahkan kembali ke login saat logout
+      navigate('/login'); 
     }
   };
 

@@ -1,156 +1,82 @@
-import api from './api';
+// src/services/tanahService.js
+import api from './api'; // Instance axios kita
 
-const TANAH_URL = '/tanah'; // Base URL untuk semua rute tanah
-
-// ------------------------------------------------------------------------
-// 1. STATISTIK
-// ------------------------------------------------------------------------
-
-// API untuk 4 kartu statistik
-export const getStats = async () => {
+/**
+ * Mengambil semua data tanah dari backend.
+ */
+export const getAllTanah = async () => {
   try {
-    const response = await api.get('/stats');
+    const response = await api.get('/tanah');
+    
+    // Sama seperti user, tangani jika data ada di 'response.data.data' (pagination)
+    // atau langsung di 'response.data'
+    return response.data.data || response.data;
+  } catch (error) {
+    console.error('Error fetching data tanah:', error.response || error);
+    throw error.response ? error.response.data : error;
+  }
+};
+
+/**
+ * Membuat data tanah baru.
+ * @param {object} tanahData - Data tanah baru
+ */
+export const createTanah = async (tanahData) => {
+  try {
+    // Catatan: Jika mengirim file/gambar, 'Content-Type' harus 'multipart/form-data'.
+    // Untuk saat ini, kita asumsikan hanya data teks.
+    const response = await api.post('/tanah', tanahData);
+    return response.data;
+  } catch (error)
+ {
+    console.error('Error creating data tanah:', error.response || error);
+    throw error.response ? error.response.data : error;
+  }
+};
+
+/**
+ * Mengupdate data tanah berdasarkan ID.
+ * @param {string|number} id - ID tanah yang akan diupdate
+ * @param {object} tanahData - Data baru untuk tanah
+ */
+export const updateTanah = async (id, tanahData) => {
+  try {
+    // Catatan: Untuk update (PUT/PATCH), API Laravel seringkali
+    // tidak bisa langsung menangani 'multipart/form-data'.
+    // Cara umum adalah menggunakan POST dengan field '_method: PUT'.
+    // Kita akan coba 'api.put' dulu, jika gagal, kita ubah.
+    const response = await api.put(`/tanah/${id}`, tanahData);
     return response.data;
   } catch (error) {
-    console.error("Gagal mengambil stats:", error);
-    throw error;
+    console.error('Error updating data tanah:', error.response || error);
+    throw error.response ? error.response.data : error;
   }
 };
 
-
-// ------------------------------------------------------------------------
-// 2. READ (Dashboard List)
-// ------------------------------------------------------------------------
-
-// API untuk tabel aset di dashboard (dengan filter & paginasi)
-// Nama ini lebih deskriptif untuk list yang berpaginasi.
-export const getTanahList = async (page = 1, status = '', search = '') => {
-  try {
-    const params = new URLSearchParams();
-    params.append('page', page);
-    if (status) {
-      params.append('status', status);
-    }
-    if (search) {
-      params.append('search', search);
-    }
-
-    const response = await api.get(`${TANAH_URL}?${params.toString()}`);
-    return response.data; // Mengembalikan objek paginasi Laravel
-  } catch (error) {
-    console.error("Gagal mengambil daftar tanah:", error);
-    throw error;
-  }
-};
-
-
-// API untuk mengambil detail satu aset
-export const getTanahDetail = async (id) => {
-    try {
-        const response = await api.get(`${TANAH_URL}/${id}`); 
-        return response.data;
-    } catch (error) {
-        throw error;
-    }
-};
-
-
-// ------------------------------------------------------------------------
-// 3. CRUD: CREATE, UPDATE, DELETE
-// ------------------------------------------------------------------------
-
-// API: CREATE (Menggantikan postTanahData)
-export const createTanah = async (tanahData) => {
-    try {
-        const response = await api.post(TANAH_URL, tanahData); // POST ke /api/tanah
-        return response.data; 
-    } catch (error) {
-        throw error;
-    }
-};
-
-// API: UPDATE 
-export const updateTanah = async (id, tanahData) => {
-    try {
-        // Menggunakan method PUT untuk update
-        const response = await api.put(`${TANAH_URL}/${id}`, tanahData);
-        return response.data;
-    } catch (error) {
-        throw error;
-    }
-};
-
-// API: DELETE 
+/**
+ * Menghapus data tanah berdasarkan ID.
+ * @param {string|number} id - ID tanah yang akan dihapus
+ */
 export const deleteTanah = async (id) => {
-    try {
-        // Menggunakan method DELETE (untuk Soft Delete di backend)
-        const response = await api.delete(`${TANAH_URL}/${id}`);
-        return response.data; 
-    } catch (error) {
-        throw error;
-    }
+  try {
+    const response = await api.delete(`/tanah/${id}`);
+    return response.data; // Berisi pesan sukses
+  } catch (error) {
+    console.error('Error deleting data tanah:', error.response || error);
+    throw error.response ? error.response.data : error;
+  }
 };
 
-
-// ------------------------------------------------------------------------
-// 4. VALIDASI (Approve/Reject)
-// ------------------------------------------------------------------------
-
-export const validateTanah = async (id, status, catatan) => {
-    try {
-        // Endpoint: POST /api/tanah/{id}/validate
-        // (Pastikan Anda telah mendaftarkan rute ini di backend routes/api.php)
-        const response = await api.post(`${TANAH_URL}/${id}/validate`, { 
-            status: status, 
-            catatan: catatan // Nama field disesuaikan agar sama dengan backend
-        });
-        return response.data;
-    } catch (error) {
-        throw error;
-    }
-};
-
-// ------------------------------------------------------------------------
-// 5. MASTER DATA / LAPORAN (Optional & Future Use)
-// ------------------------------------------------------------------------
-
-export const getMasterData = async () => {
-    // Fungsi ini tidak digunakan di Dashboard/Tambah Tanah, biarkan saja
-    try {
-        const response = await api.get('/master-data/tanah'); 
-        return response.data;
-    } catch (error) {
-        return {
-            kodefikasi: {},
-            asal: [],
-            statusSertifikat: [],
-            penggunaan: []
-        };
-    }
-};
-
-export const getLaporan = async (filters = {}) => {
-    try {
-        const params = new URLSearchParams(filters);
-        Object.keys(filters).forEach(key => {
-            if (!filters[key]) {
-                params.delete(key);
-            }
-        });
-
-        const response = await api.get(`/laporan/tanah?${params.toString()}`);
-        return response.data;
-    } catch (error) {
-        console.error("Gagal mengambil laporan:", error);
-        throw error;
-    }
-};
-
-export const createPemanfaatan = async (tanahId, data) => {
-    try {
-        const response = await api.post(`${TANAH_URL}/${tanahId}/pemanfaatan`, data);
-        return response.data;
-    } catch (error) {
-        throw error;
-    }
+/**
+ * Mengambil data satu tanah berdasarkan ID.
+ * @param {string|number} id - ID tanah
+ */
+export const getTanahById = async (id) => {
+  try {
+    const response = await api.get(`/tanah/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching data tanah ${id}:`, error.response || error);
+    throw error.response ? error.response.data : error;
+  }
 };

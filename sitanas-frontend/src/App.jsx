@@ -1,7 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-// --- TAMBAHKAN IMPORT INI ---
 // Mencoba path absolut dari 'src'
 import { NotificationProvider } from './context/NotificationContext.jsx';
 
@@ -16,6 +15,8 @@ import DashboardPage from './pages/DashboardPage.jsx';
 import LaporanPage from './pages/LaporanPage.jsx';
 import LogsPage from './pages/LogsPage.jsx';
 import ManajemenPenggunaPage from './pages/ManajemenPenggunaPage.jsx';
+import ManajemenTanahPage from './pages/ManajemenTanahPage';
+import PemanfaatanTanahPage from './pages/PemanfaatanTanahPage';
 import TambahTanahPage from './pages/TambahTanahPage.jsx';
 import EditTanahPage from './pages/EditTanahPage.jsx';
 import DetailTanahPage from './pages/DetailTanahPage.jsx';
@@ -50,7 +51,9 @@ function App() {
           <Route path="detail-tanah/:id" element={<DetailTanahPage />} />
 
           {/* Laporan & Log */}
+          <Route path="/tanah" element={<ManajemenTanahPage />} />
           <Route path="laporan" element={<LaporanPage />} />
+          <Route path="/pemanfaatan" element={<PemanfaatanTanahPage />} />
           <Route path="logs" element={<LogsPage />} />
 
           {/* Admin */}
