@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createTanah } from '../services/tanahService';
 import { useAuth } from '../hooks/useAuth';
 import '../assets/Layout.css';
+import MapPicker from '../components/common/MapPicker';
 
 // Initial form state
 const initialFormState = {
@@ -41,9 +42,27 @@ function TambahTanahPage() {
         
         // Clear validation error for this field
         if (validationErrors[name]) {
-            setValidationErrors({ ...validationErrors, [name]: null });
+            setValidationErrors(prevErrors => {
+                const newErrors = { ...prevErrors };
+                delete newErrors[name];
+                return newErrors;
+            });
         }
     };
+    
+    // Handler baru untuk menerima koordinat dari MapPicker
+    const handleCoordinatesSelect = useCallback((coords) => {
+        setForm(prevForm => ({ ...prevForm, koordinat: coords }));
+        
+        // Clear validation error untuk koordinat
+        if (validationErrors.koordinat) {
+            setValidationErrors(prevErrors => {
+                const newErrors = { ...prevErrors };
+                delete newErrors.koordinat;
+                return newErrors;
+            });
+        }
+    }, [validationErrors.koordinat]);
 
     // Validate form
     const validateForm = () => {
@@ -56,9 +75,17 @@ function TambahTanahPage() {
         if (!form.luas || parseFloat(form.luas) <= 0) {
             errors.luas = 'Luas harus diisi dan lebih dari 0';
         }
-        
+
         if (form.harga_perolehan && parseFloat(form.harga_perolehan) < 0) {
             errors.harga_perolehan = 'Harga perolehan tidak boleh negatif';
+        }
+
+        // Validasi koordinat
+        if (form.koordinat.trim()) {
+            const parts = form.koordinat.split(',').map(s => s.trim());
+            if (parts.length !== 2 || isNaN(parseFloat(parts[0])) || isNaN(parseFloat(parts[1]))) {
+                errors.koordinat = 'Format koordinat tidak valid (contoh: -6.123, 106.456)';
+            }
         }
 
         setValidationErrors(errors);
@@ -70,7 +97,7 @@ function TambahTanahPage() {
         e.preventDefault();
         
         if (!validateForm()) {
-            setError('Mohon lengkapi semua field yang wajib diisi');
+            setError('Mohon perbaiki kesalahan pada form sebelum menyimpan.');
             return;
         }
         
@@ -165,64 +192,29 @@ function TambahTanahPage() {
                 {/* Card 1: Informasi Dasar */}
                 <div className="card">
                     <div className="card-header">
-                        <h4><i className="fas fa-info-circle"></i> Informasi Dasar</h4>
+                        <h4><i className="fas fa-file-alt"></i> Informasi Dasar</h4>
                     </div>
                     <div className="card-body">
                         <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem'}}>
+                            
                             <div className="form-group">
-                                <label htmlFor="kode_barang">Kode Barang</label>
-                                <input 
-                                    type="text"
-                                    id="kode_barang"
-                                    name="kode_barang"
-                                    className="form-control"
-                                    value={form.kode_barang}
-                                    onChange={handleChange}
-                                    placeholder="Contoh: TKD.001.2024"
-                                />
-                                {validationErrors.kode_barang && (
-                                    <small style={{color: 'var(--danger-color)'}}>{validationErrors.kode_barang}</small>
-                                )}
-                            </div>
-
-                            <div className="form-group">
-                                <label htmlFor="nup">Nomor Urut Pendaftaran (NUP)</label>
-                                <input 
-                                    type="text"
-                                    id="nup"
-                                    name="nup"
-                                    className="form-control"
-                                    value={form.nup}
-                                    onChange={handleChange}
-                                    placeholder="Contoh: 001/2024"
-                                />
-                                {validationErrors.nup && (
-                                    <small style={{color: 'var(--danger-color)'}}>{validationErrors.nup}</small>
-                                )}
-                            </div>
-
-                            <div className="form-group">
-                                <label htmlFor="asal_perolehan">
-                                    Asal Perolehan <span style={{color: 'var(--danger-color)'}}>*</span>
-                                </label>
-                                <input 
+                                <label htmlFor="asal_perolehan">Asal Perolehan <span className="required-star">*</span></label>
+                                <input
                                     type="text"
                                     id="asal_perolehan"
                                     name="asal_perolehan"
-                                    className="form-control"
+                                    className={`form-control ${validationErrors.asal_perolehan ? 'is-invalid' : ''}`}
                                     value={form.asal_perolehan}
                                     onChange={handleChange}
-                                    placeholder="Contoh: Hibah, Pembelian, Wakaf"
+                                    placeholder="Contoh: Hibah, Pembelian, Warisan"
                                     required
                                 />
-                                {validationErrors.asal_perolehan && (
-                                    <small style={{color: 'var(--danger-color)'}}>{validationErrors.asal_perolehan}</small>
-                                )}
+                                {validationErrors.asal_perolehan && <small className="error-message">{validationErrors.asal_perolehan}</small>}
                             </div>
 
                             <div className="form-group">
                                 <label htmlFor="tanggal_perolehan">Tanggal Perolehan</label>
-                                <input 
+                                <input
                                     type="date"
                                     id="tanggal_perolehan"
                                     name="tanggal_perolehan"
@@ -230,70 +222,62 @@ function TambahTanahPage() {
                                     value={form.tanggal_perolehan}
                                     onChange={handleChange}
                                 />
-                                {validationErrors.tanggal_perolehan && (
-                                    <small style={{color: 'var(--danger-color)'}}>{validationErrors.tanggal_perolehan}</small>
-                                )}
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="luas">Luas (m²) <span className="required-star">*</span></label>
+                                <input
+                                    type="number"
+                                    id="luas"
+                                    name="luas"
+                                    className={`form-control ${validationErrors.luas ? 'is-invalid' : ''}`}
+                                    value={form.luas}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: 1000"
+                                    required
+                                    min="0.01"
+                                    step="0.01"
+                                />
+                                {validationErrors.luas && <small className="error-message">{validationErrors.luas}</small>}
                             </div>
 
                             <div className="form-group">
                                 <label htmlFor="harga_perolehan">Harga Perolehan (Rp)</label>
-                                <input 
+                                <input
                                     type="number"
                                     id="harga_perolehan"
                                     name="harga_perolehan"
-                                    className="form-control"
+                                    className={`form-control ${validationErrors.harga_perolehan ? 'is-invalid' : ''}`}
                                     value={form.harga_perolehan}
                                     onChange={handleChange}
-                                    placeholder="0"
+                                    placeholder="Contoh: 150000000"
                                     min="0"
-                                    step="0.01"
                                 />
-                                {validationErrors.harga_perolehan && (
-                                    <small style={{color: 'var(--danger-color)'}}>{validationErrors.harga_perolehan}</small>
-                                )}
+                                {validationErrors.harga_perolehan && <small className="error-message">{validationErrors.harga_perolehan}</small>}
                             </div>
 
-                            <div className="form-group">
-                                <label htmlFor="luas">
-                                    Luas (m²) <span style={{color: 'var(--danger-color)'}}>*</span>
-                                </label>
-                                <input 
-                                    type="number"
-                                    id="luas"
-                                    name="luas"
-                                    className="form-control"
-                                    value={form.luas}
-                                    onChange={handleChange}
-                                    placeholder="0"
-                                    min="0"
-                                    step="0.01"
-                                    required
-                                />
-                                {validationErrors.luas && (
-                                    <small style={{color: 'var(--danger-color)'}}>{validationErrors.luas}</small>
-                                )}
-                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Card 2: Informasi Sertifikat */}
+                {/* Card 2: Informasi Sertifikat & Kodefikasi */}
                 <div className="card">
                     <div className="card-header">
-                        <h4><i className="fas fa-certificate"></i> Informasi Sertifikat</h4>
+                        <h4><i className="fas fa-certificate"></i> Sertifikat & Kodefikasi</h4>
                     </div>
                     <div className="card-body">
                         <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem'}}>
+
                             <div className="form-group">
                                 <label htmlFor="nomor_sertifikat">Nomor Sertifikat</label>
-                                <input 
+                                <input
                                     type="text"
                                     id="nomor_sertifikat"
                                     name="nomor_sertifikat"
                                     className="form-control"
                                     value={form.nomor_sertifikat}
                                     onChange={handleChange}
-                                    placeholder="Contoh: 123/2024"
+                                    placeholder="Contoh: SHM 123456"
                                 />
                             </div>
 
@@ -307,14 +291,42 @@ function TambahTanahPage() {
                                     onChange={handleChange}
                                 >
                                     <option value="">-- Pilih Status --</option>
-                                    <option value="Sudah Bersertifikat">Sudah Bersertifikat</option>
-                                    <option value="Belum Bersertifikat">Belum Bersertifikat</option>
-                                    <option value="Proses Sertifikasi">Proses Sertifikasi</option>
+                                    <option value="SHM">SHM (Sertifikat Hak Milik)</option>
+                                    <option value="HGB">HGB (Hak Guna Bangun)</option>
+                                    <option value="Girik">Girik/Petok D</option>
+                                    <option value="Lainnya">Lainnya</option>
                                 </select>
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="kode_barang">Kode Barang</label>
+                                <input
+                                    type="text"
+                                    id="kode_barang"
+                                    name="kode_barang"
+                                    className="form-control"
+                                    value={form.kode_barang}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: 01.01.01.01.01"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="nup">NUP (Nomor Urut Pendaftaran)</label>
+                                <input
+                                    type="text"
+                                    id="nup"
+                                    name="nup"
+                                    className="form-control"
+                                    value={form.nup}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: 123"
+                                />
                             </div>
                         </div>
                     </div>
                 </div>
+
 
                 {/* Card 3: Lokasi & Penggunaan */}
                 <div className="card">
@@ -323,6 +335,7 @@ function TambahTanahPage() {
                     </div>
                     <div className="card-body">
                         <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem'}}>
+                            
                             <div className="form-group" style={{gridColumn: '1 / -1'}}>
                                 <label htmlFor="lokasi">Lokasi / Alamat Lengkap</label>
                                 <textarea
@@ -352,6 +365,7 @@ function TambahTanahPage() {
                                     <option value="Makam">Makam</option>
                                     <option value="Jalan">Jalan</option>
                                     <option value="Pertanian">Pertanian</option>
+                                    <option value="Sawah">Sawah</option>
                                     <option value="Lainnya">Lainnya</option>
                                 </select>
                             </div>
@@ -364,68 +378,85 @@ function TambahTanahPage() {
                                     className="form-control"
                                     value={form.kondisi}
                                     onChange={handleChange}
+                                    required
                                 >
                                     <option value="Baik">Baik</option>
                                     <option value="Rusak Ringan">Rusak Ringan</option>
                                     <option value="Rusak Berat">Rusak Berat</option>
                                 </select>
                             </div>
-
-                            <div className="form-group">
-                                <label htmlFor="koordinat">Koordinat (Lat, Long)</label>
-                                <input 
-                                    type="text"
-                                    id="koordinat"
-                                    name="koordinat"
-                                    className="form-control"
-                                    value={form.koordinat}
-                                    onChange={handleChange}
-                                    placeholder="Contoh: -6.200000, 106.816666"
-                                />
-                                <small style={{color: 'var(--text-muted)', fontSize: '0.75rem'}}>
-                                    Format: latitude, longitude
-                                </small>
-                            </div>
                         </div>
+
+                        {/* --- INI ADALAH BAGIAN MAP --- */}
+                        <div className="form-group" style={{marginTop: '1.5rem'}}>
+                            <label htmlFor="koordinat">
+                                Koordinat Lokasi
+                                {validationErrors.koordinat && <small className="error-message" style={{marginLeft: '1rem'}}>{validationErrors.koordinat}</small>}
+                            </label>
+                            
+                            {/* Komponen Peta */}
+                            <MapPicker 
+                                initialCoordinates={form.koordinat}
+                                onCoordinatesSelect={handleCoordinatesSelect}
+                            />
+                            
+                            {/* Input Manual Tetap Ada */}
+                            <input 
+                                type="text"
+                                id="koordinat"
+                                name="koordinat"
+                                className={`form-control ${validationErrors.koordinat ? 'is-invalid' : ''}`}
+                                style={{marginTop: '1rem'}} // Beri jarak dari peta
+                                value={form.koordinat}
+                                onChange={handleChange} // Tetap gunakan handleChange agar sinkron
+                                placeholder="Contoh: -6.200000, 106.816666"
+                            />
+                            <small className="form-helper-text">
+                                Klik pada peta untuk memilih lokasi, atau masukkan koordinat (latitude, longitude) secara manual.
+                            </small>
+                        </div>
+                        {/* --- AKHIR BAGIAN MAP --- */}
+
                     </div>
                 </div>
 
                 {/* Card 4: Batas-Batas */}
                 <div className="card">
                     <div className="card-header">
-                        <h4><i className="fas fa-border-all"></i> Batas-Batas Tanah</h4>
+                        <h4><i className="fas fa-vector-square"></i> Batas-Batas Tanah</h4>
                     </div>
                     <div className="card-body">
                         <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem'}}>
+                            
                             <div className="form-group">
                                 <label htmlFor="batas_utara">Batas Utara</label>
-                                <input 
+                                <input
                                     type="text"
                                     id="batas_utara"
                                     name="batas_utara"
                                     className="form-control"
                                     value={form.batas_utara}
                                     onChange={handleChange}
-                                    placeholder="Contoh: Jalan Raya"
+                                    placeholder="Contoh: Tanah Pak Budi"
                                 />
                             </div>
 
                             <div className="form-group">
                                 <label htmlFor="batas_timur">Batas Timur</label>
-                                <input 
+                                <input
                                     type="text"
                                     id="batas_timur"
                                     name="batas_timur"
                                     className="form-control"
                                     value={form.batas_timur}
                                     onChange={handleChange}
-                                    placeholder="Contoh: Tanah Pak Ahmad"
+                                    placeholder="Contoh: Jalan Desa"
                                 />
                             </div>
 
                             <div className="form-group">
                                 <label htmlFor="batas_selatan">Batas Selatan</label>
-                                <input 
+                                <input
                                     type="text"
                                     id="batas_selatan"
                                     name="batas_selatan"
@@ -438,14 +469,14 @@ function TambahTanahPage() {
 
                             <div className="form-group">
                                 <label htmlFor="batas_barat">Batas Barat</label>
-                                <input 
+                                <input
                                     type="text"
                                     id="batas_barat"
                                     name="batas_barat"
                                     className="form-control"
                                     value={form.batas_barat}
                                     onChange={handleChange}
-                                    placeholder="Contoh: Tanah Bu Siti"
+                                    placeholder="Contoh: Tanah Bu Ani"
                                 />
                             </div>
                         </div>
@@ -455,11 +486,11 @@ function TambahTanahPage() {
                 {/* Card 5: Keterangan */}
                 <div className="card">
                     <div className="card-header">
-                        <h4><i className="fas fa-sticky-note"></i> Keterangan Tambahan</h4>
+                        <h4><i className="fas fa-info-circle"></i> Keterangan</h4>
                     </div>
                     <div className="card-body">
                         <div className="form-group">
-                            <label htmlFor="keterangan">Keterangan</label>
+                            <label htmlFor="keterangan">Keterangan Tambahan</label>
                             <textarea
                                 id="keterangan"
                                 name="keterangan"
@@ -467,12 +498,12 @@ function TambahTanahPage() {
                                 value={form.keterangan}
                                 onChange={handleChange}
                                 rows="4"
-                                placeholder="Catatan atau informasi tambahan..."
+                                placeholder="Tulis catatan atau keterangan lain jika diperlukan..."
                             />
                         </div>
                     </div>
                 </div>
-
+                
                 {/* Action Buttons */}
                 <div className="card">
                     <div className="card-body">
