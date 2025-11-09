@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 // 1. Tambahkan FaFileAlt
 import { FaPlus, FaEdit, FaTrash, FaFileAlt } from 'react-icons/fa';
 
-import { getAllTanah, deleteTanah } from '../services/tanahService';
+import { getStats, deleteTanah } from '../services/tanahService';
 // 2. Import kedua modal
 import AddTanahModal from '../components/common/AddTanahModal';
 import DokumenModal from '../components/common/DokumenModal';

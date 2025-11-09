@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 
 // 1. Import service Pemanfaatan DAN Tanah
 import { createPemanfaatan, updatePemanfaatan } from '../../services/pemanfaatanTanahService';
-import { getAllTanah } from '../../services/tanahService'; // Untuk dropdown
+import { getStats } from '../../services/tanahService'; // Untuk dropdown
 
 // Gunakan CSS yang sama
 import '../../assets/AddUserModal.css'; 

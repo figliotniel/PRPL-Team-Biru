@@ -1,40 +1,10 @@
-import React, { useState, useEffect } from 'react';
-// Asumsi Anda akan menginstal react-leaflet dan leaflet
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'; 
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { createTanah } from '../services/tanahService';
 import { useAuth } from '../hooks/useAuth';
-import '../assets/Layout.css'; 
-import { getAllTanah } from '../services/tanahService';
+import '../assets/Layout.css';
 
-// Fix Leaflet Default Icon issue dengan Webpack/Vite
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
-
-
-// Komponen Peta Interaktif untuk mengambil koordinat
-const LocationMarker = ({ setKoordinat }) => {
-    const [position, setPosition] = useState(null);
-    const map = useMapEvents({
-        click(e) {
-            setPosition(e.latlng);
-            setKoordinat(`${e.latlng.lat}, ${e.latlng.lng}`);
-            // Pindahkan peta ke lokasi yang diklik
-            map.flyTo(e.latlng, map.getZoom()); 
-        },
-    });
-
-    return position === null ? null : (
-        <Marker position={position}></Marker>
-    );
-};
-
-// State awal untuk form (disinkronkan dengan Migration TanahKasDesa)
+// Initial form state
 const initialFormState = {
     kode_barang: '',
     nup: '',
@@ -52,175 +22,491 @@ const initialFormState = {
     batas_timur: '',
     batas_selatan: '',
     batas_barat: '',
-    keterangan: '',
+    keterangan: ''
 };
 
-
-function TambahDataTanahPage() {
+function TambahTanahPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
+    
     const [form, setForm] = useState(initialFormState);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
+    const [validationErrors, setValidationErrors] = useState({});
 
-    // Pastikan hanya Admin yang bisa akses halaman ini
-    useEffect(() => {
-        if (user && user.role_id !== 1) {
-            navigate('/dashboard', { replace: true });
-        }
-    }, [user, navigate]);
-
-
+    // Handle input change
     const handleChange = (e) => {
         const { name, value } = e.target;
-        // Penanganan input number agar tidak crash saat kosong
-        if (name === 'harga_perolehan' || name === 'luas') {
-            setForm({ ...form, [name]: value === '' ? 0 : parseFloat(value) });
-        } else {
-            setForm({ ...form, [name]: value });
+        setForm({ ...form, [name]: value });
+        
+        // Clear validation error for this field
+        if (validationErrors[name]) {
+            setValidationErrors({ ...validationErrors, [name]: null });
         }
     };
 
-    const setKoordinatFromMap = (coords) => {
-        setForm(prev => ({ ...prev, koordinat: coords }));
+    // Validate form
+    const validateForm = () => {
+        const errors = {};
+        
+        if (!form.asal_perolehan.trim()) {
+            errors.asal_perolehan = 'Asal perolehan harus diisi';
+        }
+        
+        if (!form.luas || parseFloat(form.luas) <= 0) {
+            errors.luas = 'Luas harus diisi dan lebih dari 0';
+        }
+        
+        if (form.harga_perolehan && parseFloat(form.harga_perolehan) < 0) {
+            errors.harga_perolehan = 'Harga perolehan tidak boleh negatif';
+        }
+
+        setValidationErrors(errors);
+        return Object.keys(errors).length === 0;
     };
 
+    // Handle submit
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError(null);
-        setIsLoading(true);
         
-        // ** PERBAIKAN: LAKUKAN VALIDASI DASAR DULU **
-        if (!form.koordinat) {
-             setError("Harap klik peta untuk menentukan Koordinat Lokasi.");
-             setIsLoading(false);
-             return;
+        if (!validateForm()) {
+            setError('Mohon lengkapi semua field yang wajib diisi');
+            return;
         }
-
+        
+        setError(null);
+        setIsSubmitting(true);
+        
         try {
-            const response = await postTanahData(form); // <-- POST DATA SEKARANG!
+            // Konversi string kosong ke null untuk field numeric
+            const cleanedData = {
+                ...form,
+                harga_perolehan: form.harga_perolehan ? parseFloat(form.harga_perolehan) : null,
+                luas: parseFloat(form.luas),
+                tanggal_perolehan: form.tanggal_perolehan || null,
+                kode_barang: form.kode_barang || null,
+                nup: form.nup || null,
+                nomor_sertifikat: form.nomor_sertifikat || null,
+                status_sertifikat: form.status_sertifikat || null,
+                lokasi: form.lokasi || null,
+                penggunaan: form.penggunaan || null,
+                koordinat: form.koordinat || null,
+                batas_utara: form.batas_utara || null,
+                batas_timur: form.batas_timur || null,
+                batas_selatan: form.batas_selatan || null,
+                batas_barat: form.batas_barat || null,
+                keterangan: form.keterangan || null
+            };
+
+            const response = await createTanah(cleanedData);
             
-            alert(response.message || "Data Tanah berhasil disimpan!");
-            navigate('/dashboard'); // Setelah berhasil, user akan diarahkan kembali ke dashboard
+            // Sukses - redirect ke dashboard
+            alert('Data tanah berhasil ditambahkan!');
+            navigate('/dashboard');
+            
         } catch (err) {
-            // Penanganan error lebih baik (misalnya dari backend Laravel)
-            const validationMessage = err.response?.data?.errors 
-                                      ? Object.values(err.response.data.errors).flat().join('; ')
-                                      : err.response?.data?.message || "Gagal menyimpan data tanah.";
-            setError(validationMessage);
+            console.error('Submit error:', err);
+            
+            // Handle validation errors dari backend
+            if (err.response?.data?.errors) {
+                const backendErrors = {};
+                Object.keys(err.response.data.errors).forEach(key => {
+                    backendErrors[key] = err.response.data.errors[key][0];
+                });
+                setValidationErrors(backendErrors);
+                setError('Terdapat kesalahan pada form. Periksa kembali input Anda.');
+            } else {
+                setError(err.response?.data?.message || 'Gagal menyimpan data. Silakan coba lagi.');
+            }
         } finally {
-            setIsLoading(false);
+            setIsSubmitting(false);
         }
     };
-    
-    if (user?.role_id !== 1) return <div className="notification error">Akses ditolak. Anda bukan Admin.</div>;
-    
-    // Default center (misal: Yogyakarta)
-    const defaultCenter = [-7.7956, 110.3695]; 
+
+    // Handle cancel
+    const handleCancel = () => {
+        if (window.confirm('Yakin ingin membatalkan? Data yang diisi akan hilang.')) {
+            navigate('/dashboard');
+        }
+    };
+
+    // Guard - hanya admin dan kades
+    if (user?.role_id !== 1 && user?.role_id !== 2) {
+        return (
+            <div>
+                <h1>Akses Ditolak</h1>
+                <div className="notification error">
+                    <i className="fas fa-exclamation-triangle"></i>
+                    Anda tidak memiliki izin untuk menambah data tanah.
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div>
             <div className="content-header">
-                <h1>Tambah Data Tanah Kas Desa</h1>
-                <button className="btn btn-secondary" onClick={() => navigate('/dashboard')}>
-                    <i className="fas fa-arrow-left"></i> Kembali
-                </button>
+                <div>
+                    <h1>Tambah Data Tanah Kas Desa</h1>
+                    <p style={{color: 'var(--text-muted)', marginTop: '0.5rem'}}>
+                        Lengkapi form di bawah untuk menambahkan data aset tanah baru
+                    </p>
+                </div>
             </div>
-            
-            {error && <div className="notification error">{error}</div>}
+
+            {error && (
+                <div className="notification error">
+                    <i className="fas fa-exclamation-circle"></i>
+                    {error}
+                </div>
+            )}
 
             <form onSubmit={handleSubmit}>
-                <div className="card-group">
-                    {/* CARD 1: INFORMASI DASAR */}
-                    <div className="card">
-                        <div className="card-header"><h4><i className="fas fa-file-alt icon-left"></i> Detail Aset</h4></div>
-                        <div className="card-body grid-cols-2">
-                            <div className="form-group"><label>Kode Barang</label><input type="text" name="kode_barang" className="form-control" value={form.kode_barang} onChange={handleChange} /></div>
-                            <div className="form-group"><label>NUP</label><input type="text" name="nup" className="form-control" value={form.nup} onChange={handleChange} /></div>
-                            <div className="form-group"><label>Asal Perolehan</label><input type="text" name="asal_perolehan" className="form-control" value={form.asal_perolehan} onChange={handleChange} required /></div>
-                            <div className="form-group"><label>Tanggal Perolehan</label><input type="date" name="tanggal_perolehan" className="form-control" value={form.tanggal_perolehan} onChange={handleChange} /></div>
-                            <div className="form-group"><label>Harga Perolehan</label><input type="number" name="harga_perolehan" className="form-control" value={form.harga_perolehan} onChange={handleChange} /></div>
-                            <div className="form-group"><label>Luas (m²)</label><input type="number" name="luas" className="form-control" value={form.luas} onChange={handleChange} required /></div>
-                            <div className="form-group"><label>Penggunaan Saat Ini</label><input type="text" name="penggunaan" className="form-control" value={form.penggunaan} onChange={handleChange} /></div>
+                {/* Card 1: Informasi Dasar */}
+                <div className="card">
+                    <div className="card-header">
+                        <h4><i className="fas fa-info-circle"></i> Informasi Dasar</h4>
+                    </div>
+                    <div className="card-body">
+                        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem'}}>
                             <div className="form-group">
-                                <label>Kondisi</label>
-                                <select name="kondisi" className="form-control" value={form.kondisi} onChange={handleChange}>
+                                <label htmlFor="kode_barang">Kode Barang</label>
+                                <input 
+                                    type="text"
+                                    id="kode_barang"
+                                    name="kode_barang"
+                                    className="form-control"
+                                    value={form.kode_barang}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: TKD.001.2024"
+                                />
+                                {validationErrors.kode_barang && (
+                                    <small style={{color: 'var(--danger-color)'}}>{validationErrors.kode_barang}</small>
+                                )}
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="nup">Nomor Urut Pendaftaran (NUP)</label>
+                                <input 
+                                    type="text"
+                                    id="nup"
+                                    name="nup"
+                                    className="form-control"
+                                    value={form.nup}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: 001/2024"
+                                />
+                                {validationErrors.nup && (
+                                    <small style={{color: 'var(--danger-color)'}}>{validationErrors.nup}</small>
+                                )}
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="asal_perolehan">
+                                    Asal Perolehan <span style={{color: 'var(--danger-color)'}}>*</span>
+                                </label>
+                                <input 
+                                    type="text"
+                                    id="asal_perolehan"
+                                    name="asal_perolehan"
+                                    className="form-control"
+                                    value={form.asal_perolehan}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: Hibah, Pembelian, Wakaf"
+                                    required
+                                />
+                                {validationErrors.asal_perolehan && (
+                                    <small style={{color: 'var(--danger-color)'}}>{validationErrors.asal_perolehan}</small>
+                                )}
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="tanggal_perolehan">Tanggal Perolehan</label>
+                                <input 
+                                    type="date"
+                                    id="tanggal_perolehan"
+                                    name="tanggal_perolehan"
+                                    className="form-control"
+                                    value={form.tanggal_perolehan}
+                                    onChange={handleChange}
+                                />
+                                {validationErrors.tanggal_perolehan && (
+                                    <small style={{color: 'var(--danger-color)'}}>{validationErrors.tanggal_perolehan}</small>
+                                )}
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="harga_perolehan">Harga Perolehan (Rp)</label>
+                                <input 
+                                    type="number"
+                                    id="harga_perolehan"
+                                    name="harga_perolehan"
+                                    className="form-control"
+                                    value={form.harga_perolehan}
+                                    onChange={handleChange}
+                                    placeholder="0"
+                                    min="0"
+                                    step="0.01"
+                                />
+                                {validationErrors.harga_perolehan && (
+                                    <small style={{color: 'var(--danger-color)'}}>{validationErrors.harga_perolehan}</small>
+                                )}
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="luas">
+                                    Luas (m²) <span style={{color: 'var(--danger-color)'}}>*</span>
+                                </label>
+                                <input 
+                                    type="number"
+                                    id="luas"
+                                    name="luas"
+                                    className="form-control"
+                                    value={form.luas}
+                                    onChange={handleChange}
+                                    placeholder="0"
+                                    min="0"
+                                    step="0.01"
+                                    required
+                                />
+                                {validationErrors.luas && (
+                                    <small style={{color: 'var(--danger-color)'}}>{validationErrors.luas}</small>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Card 2: Informasi Sertifikat */}
+                <div className="card">
+                    <div className="card-header">
+                        <h4><i className="fas fa-certificate"></i> Informasi Sertifikat</h4>
+                    </div>
+                    <div className="card-body">
+                        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem'}}>
+                            <div className="form-group">
+                                <label htmlFor="nomor_sertifikat">Nomor Sertifikat</label>
+                                <input 
+                                    type="text"
+                                    id="nomor_sertifikat"
+                                    name="nomor_sertifikat"
+                                    className="form-control"
+                                    value={form.nomor_sertifikat}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: 123/2024"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="status_sertifikat">Status Sertifikat</label>
+                                <select
+                                    id="status_sertifikat"
+                                    name="status_sertifikat"
+                                    className="form-control"
+                                    value={form.status_sertifikat}
+                                    onChange={handleChange}
+                                >
+                                    <option value="">-- Pilih Status --</option>
+                                    <option value="Sudah Bersertifikat">Sudah Bersertifikat</option>
+                                    <option value="Belum Bersertifikat">Belum Bersertifikat</option>
+                                    <option value="Proses Sertifikasi">Proses Sertifikasi</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Card 3: Lokasi & Penggunaan */}
+                <div className="card">
+                    <div className="card-header">
+                        <h4><i className="fas fa-map-marker-alt"></i> Lokasi & Penggunaan</h4>
+                    </div>
+                    <div className="card-body">
+                        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem'}}>
+                            <div className="form-group" style={{gridColumn: '1 / -1'}}>
+                                <label htmlFor="lokasi">Lokasi / Alamat Lengkap</label>
+                                <textarea
+                                    id="lokasi"
+                                    name="lokasi"
+                                    className="form-control"
+                                    value={form.lokasi}
+                                    onChange={handleChange}
+                                    rows="3"
+                                    placeholder="Contoh: Jl. Raya Desa No. 123, RT 01/RW 02, Desa..."
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="penggunaan">Penggunaan Tanah</label>
+                                <select
+                                    id="penggunaan"
+                                    name="penggunaan"
+                                    className="form-control"
+                                    value={form.penggunaan}
+                                    onChange={handleChange}
+                                >
+                                    <option value="">-- Pilih Penggunaan --</option>
+                                    <option value="Kantor Desa">Kantor Desa</option>
+                                    <option value="Balai Desa">Balai Desa</option>
+                                    <option value="Lapangan">Lapangan</option>
+                                    <option value="Makam">Makam</option>
+                                    <option value="Jalan">Jalan</option>
+                                    <option value="Pertanian">Pertanian</option>
+                                    <option value="Lainnya">Lainnya</option>
+                                </select>
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="kondisi">Kondisi Tanah</label>
+                                <select
+                                    id="kondisi"
+                                    name="kondisi"
+                                    className="form-control"
+                                    value={form.kondisi}
+                                    onChange={handleChange}
+                                >
                                     <option value="Baik">Baik</option>
                                     <option value="Rusak Ringan">Rusak Ringan</option>
                                     <option value="Rusak Berat">Rusak Berat</option>
                                 </select>
                             </div>
-                        </div>
-                    </div>
-
-                    {/* CARD 2: LOKASI DAN PETA */}
-                    <div className="card">
-                        <div className="card-header"><h4><i className="fas fa-map-marker-alt icon-left"></i> Lokasi & Peta</h4></div>
-                        <div className="card-body">
-                            <div className="form-group"><label>Nomor Sertifikat</label><input type="text" name="nomor_sertifikat" className="form-control" value={form.nomor_sertifikat} onChange={handleChange} /></div>
-                            <div className="form-group"><label>Status Sertifikat</label><input type="text" name="status_sertifikat" className="form-control" value={form.status_sertifikat} onChange={handleChange} /></div>
-                            <div className="form-group"><label>Lokasi Detail (Alamat)</label><textarea name="lokasi" className="form-control" value={form.lokasi} onChange={handleChange}></textarea></div>
-                            
-                            <div className="form-group">
-                                <label>Koordinat (Lat, Lng)</label>
-                                <input type="text" name="koordinat" className="form-control" value={form.koordinat} onChange={handleChange} placeholder="Klik peta untuk mendapatkan koordinat" required readOnly />
-                            </div>
 
                             <div className="form-group">
-                                <label>Pilih Lokasi di Peta (Klik untuk Tandai)</label>
-                                <div style={{ height: '300px', width: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
-                                    <MapContainer 
-                                        center={defaultCenter} 
-                                        zoom={13} 
-                                        scrollWheelZoom={true} 
-                                        style={{ height: '100%', width: '100%' }}
-                                    >
-                                        <TileLayer
-                                            attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                        />
-                                        <LocationMarker setKoordinat={setKoordinatFromMap} />
-                                        {/* Tampilkan marker jika koordinat sudah ada */}
-                                        {form.koordinat && (() => {
-                                            const parts = form.koordinat.split(',').map(p => parseFloat(p.trim()));
-                                            if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-                                                return <Marker position={[parts[0], parts[1]]} />;
-                                            }
-                                            return null;
-                                        })()}
-                                    </MapContainer>
-                                </div>
+                                <label htmlFor="koordinat">Koordinat (Lat, Long)</label>
+                                <input 
+                                    type="text"
+                                    id="koordinat"
+                                    name="koordinat"
+                                    className="form-control"
+                                    value={form.koordinat}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: -6.200000, 106.816666"
+                                />
+                                <small style={{color: 'var(--text-muted)', fontSize: '0.75rem'}}>
+                                    Format: latitude, longitude
+                                </small>
                             </div>
                         </div>
-                    </div>
-                </div> {/* End card-group */}
-                
-                {/* CARD 3: BATAS DAN KETERANGAN */}
-                <div className="card">
-                    <div className="card-header"><h4><i className="fas fa-ruler-combined icon-left"></i> Batas & Keterangan</h4></div>
-                    <div className="card-body grid-cols-4"> {/* Layout 4 kolom untuk batas */}
-                        <div className="form-group"><label>Batas Utara</label><input type="text" name="batas_utara" className="form-control" value={form.batas_utara} onChange={handleChange} /></div>
-                        <div className="form-group"><label>Batas Timur</label><input type="text" name="batas_timur" className="form-control" value={form.batas_timur} onChange={handleChange} /></div>
-                        <div className="form-group"><label>Batas Selatan</label><input type="text" name="batas_selatan" className="form-control" value={form.batas_selatan} onChange={handleChange} /></div>
-                        <div className="form-group"><label>Batas Barat</label><input type="text" name="batas_barat" className="form-control" value={form.batas_barat} onChange={handleChange} /></div>
-                    </div>
-                    <div className="card-body">
-                        <div className="form-group"><label>Keterangan Tambahan</label><textarea name="keterangan" className="form-control" value={form.keterangan} onChange={handleChange} rows="3"></textarea></div>
                     </div>
                 </div>
 
-                <div className="card-footer" style={{ padding: '1.5rem', borderTop: '1px solid #e5e7eb', textAlign: 'right' }}>
-                    <button type="submit" className="btn btn-success" disabled={isLoading}>
-                        {isLoading ? (
-                            <span><i className="fas fa-spinner fa-spin icon-left"></i> Menyimpan...</span>
-                        ) : (
-                            <span><i className="fas fa-save icon-left"></i> Simpan Data Tanah</span>
-                        )}
-                    </button>
+                {/* Card 4: Batas-Batas */}
+                <div className="card">
+                    <div className="card-header">
+                        <h4><i className="fas fa-border-all"></i> Batas-Batas Tanah</h4>
+                    </div>
+                    <div className="card-body">
+                        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem'}}>
+                            <div className="form-group">
+                                <label htmlFor="batas_utara">Batas Utara</label>
+                                <input 
+                                    type="text"
+                                    id="batas_utara"
+                                    name="batas_utara"
+                                    className="form-control"
+                                    value={form.batas_utara}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: Jalan Raya"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="batas_timur">Batas Timur</label>
+                                <input 
+                                    type="text"
+                                    id="batas_timur"
+                                    name="batas_timur"
+                                    className="form-control"
+                                    value={form.batas_timur}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: Tanah Pak Ahmad"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="batas_selatan">Batas Selatan</label>
+                                <input 
+                                    type="text"
+                                    id="batas_selatan"
+                                    name="batas_selatan"
+                                    className="form-control"
+                                    value={form.batas_selatan}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: Sungai"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="batas_barat">Batas Barat</label>
+                                <input 
+                                    type="text"
+                                    id="batas_barat"
+                                    name="batas_barat"
+                                    className="form-control"
+                                    value={form.batas_barat}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: Tanah Bu Siti"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Card 5: Keterangan */}
+                <div className="card">
+                    <div className="card-header">
+                        <h4><i className="fas fa-sticky-note"></i> Keterangan Tambahan</h4>
+                    </div>
+                    <div className="card-body">
+                        <div className="form-group">
+                            <label htmlFor="keterangan">Keterangan</label>
+                            <textarea
+                                id="keterangan"
+                                name="keterangan"
+                                className="form-control"
+                                value={form.keterangan}
+                                onChange={handleChange}
+                                rows="4"
+                                placeholder="Catatan atau informasi tambahan..."
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="card">
+                    <div className="card-body">
+                        <div style={{display: 'flex', gap: '1rem', justifyContent: 'flex-end'}}>
+                            <button 
+                                type="button" 
+                                className="btn btn-secondary"
+                                onClick={handleCancel}
+                                disabled={isSubmitting}
+                            >
+                                <i className="fas fa-times"></i> Batal
+                            </button>
+                            <button 
+                                type="submit" 
+                                className="btn btn-primary"
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <span className="loading-spinner"></span>
+                                        Menyimpan...
+                                    </>
+                                ) : (
+                                    <>
+                                        <i className="fas fa-save"></i> Simpan Data
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </form>
         </div>
     );
 }
 
-export default TambahDataTanahPage;
+export default TambahTanahPage;
