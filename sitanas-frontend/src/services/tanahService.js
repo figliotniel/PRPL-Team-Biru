@@ -1,5 +1,4 @@
-// src/services/tanahService.js
-import api from './api'; // Instance axios kita
+import api from './api';
 
 /**
  * Mengambil semua data tanah dari backend.

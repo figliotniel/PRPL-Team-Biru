@@ -1,4 +1,5 @@
-import React, { createContext, useState, useEffect, useCallback } from 'react';
+// src/context/AuthContext.jsx
+import React, { createContext, useState, useEffect } from 'react';
 import api from '../services/api';
 
 export const AuthContext = createContext(null);
@@ -7,116 +8,96 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  // Fungsi untuk clear auth state
-  const clearAuth = useCallback(() => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('token');
-  }, []);
-
-  // Fungsi untuk validasi token
-  const validateToken = useCallback(async () => {
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const response = await api.get('/user');
-      setUser(response.data);
-      setError(null);
-    } catch (error) {
-      console.error("Token validation failed:", error);
-      
-      // Jika token expired atau invalid
-      if (error.response?.status === 401) {
-        clearAuth();
-        setError('Sesi Anda telah berakhir. Silakan login kembali.');
-      } else {
-        setError('Gagal memvalidasi sesi. Coba refresh halaman.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [token, clearAuth]);
-
-  // Validasi token saat mount dan saat token berubah
   useEffect(() => {
-    validateToken();
-  }, [validateToken]);
+    const checkUser = async () => {
+      if (token) {
+        try {
+          // Validasi token dengan backend
+          const response = await api.get('/user');
+          setUser(response.data);
+        } catch (error) {
+          console.error("Token tidak valid:", error);
+          // Bersihkan token yang tidak valid
+          localStorage.removeItem('token');
+          setToken(null);
+          setUser(null);
+        }
+      }
+      setLoading(false);
+    };
+    
+    checkUser();
+  }, [token]);
 
-  // Fungsi login
   const login = async (email, password) => {
-    setError(null);
-    setLoading(true);
-
     try {
+      // Panggil API login
       const response = await api.post('/login', { email, password });
       
+      // Ekstrak data dari response
       const { token: newToken, user: newUser } = response.data;
 
       if (!newToken || !newUser) {
-        throw new Error('Response tidak valid dari server');
+        throw new Error("Response dari server tidak lengkap");
       }
 
+      // Simpan token dan user
       localStorage.setItem('token', newToken);
       setToken(newToken);
       setUser(newUser);
-      setError(null);
 
       return { success: true };
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("Login gagal:", error);
       
-      const errorMessage = 
-        error.response?.data?.message || 
-        error.message || 
-        'Login gagal. Periksa email dan password Anda.';
-      
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
+      // Handle berbagai jenis error
+      if (error.response) {
+        // Server merespons dengan status error
+        const status = error.response.status;
+        const message = error.response.data?.message;
+        
+        if (status === 401) {
+          throw new Error("Email atau Password salah");
+        } else if (status === 500) {
+          throw new Error("Terjadi kesalahan di server. Silakan coba lagi.");
+        } else if (status === 422) {
+          throw new Error(message || "Data yang Anda masukkan tidak valid");
+        } else {
+          throw new Error(message || `Error: ${status}`);
+        }
+      } else if (error.request) {
+        // Request dikirim tapi tidak ada response
+        throw new Error("Tidak dapat terhubung ke server. Periksa koneksi Anda.");
+      } else {
+        // Error lain
+        throw new Error(error.message || "Terjadi kesalahan yang tidak diketahui");
+      }
     }
   };
 
-  // Fungsi logout
   const logout = async () => {
     try {
-      // Panggil API logout untuk invalidate token di server
+      // Panggil API logout (optional, tapi recommended)
       await api.post('/logout');
     } catch (error) {
-      console.error("Logout API error:", error);
-      // Tetap lanjutkan logout meski API gagal
+      console.error("Logout error:", error);
+      // Tetap lanjutkan logout di frontend meski API gagal
     } finally {
-      clearAuth();
+      // Bersihkan data di frontend
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem('token');
     }
   };
-
-  // Fungsi refresh user data
-  const refreshUser = useCallback(async () => {
-    if (!token) return;
-    
-    try {
-      const response = await api.get('/user');
-      setUser(response.data);
-    } catch (error) {
-      console.error("Refresh user error:", error);
-    }
-  }, [token]);
 
   const value = {
     user,
     token,
-    isLoggedIn: !!user && !!token,
+    isLoggedIn: !!user,
     loading,
-    error,
     login,
     logout,
-    refreshUser,
-    clearAuth
   };
 
   return (
