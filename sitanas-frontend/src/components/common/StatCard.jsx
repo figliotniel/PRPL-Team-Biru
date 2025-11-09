@@ -1,18 +1,20 @@
-// src/components/common/StatCard.jsx
 import React from 'react';
+// Asumsi Anda sudah memiliki styling untuk .card-stat, dll.
 
-const StatCard = ({ icon, color, label, value, unit = '' }) => {
+function StatCard({ title, value, iconClass, color }) {
   return (
-    <div className="stat-card">
-      <div className="stat-icon" style={{ backgroundColor: color + '30' }}> {/* Tambahkan transparansi */}
-        <i className={`fas ${icon}`} style={{ color: color }}></i>
-      </div>
-      <div className="stat-info">
-        <span className="stat-value">{value}{unit}</span>
-        <span className="stat-label">{label}</span>
+    <div className="card card-stat" style={{ borderLeft: `5px solid ${color}` }}>
+      <div className="card-body">
+        <div className="stat-content">
+          <h5 className="stat-title">{title}</h5>
+          <h1 className="stat-value">{value}</h1>
+        </div>
+        <div className="stat-icon" style={{ color }}>
+          <i className={iconClass}></i>
+        </div>
       </div>
     </div>
   );
-};
+}
 
 export default StatCard;

@@ -1,52 +1,154 @@
-import React from 'react';
+// src/components/common/AddUserModal.jsx
+import React, { useState, useEffect } from 'react';
+import { createUser, getRoles } from '../../services/userService';
+import { generatePassword } from '../../utils/passwordGenerator';
 
-// Props yang diterima: showModal, onClose, roles, form, handleChange, handleSubmit, formError, handleGeneratePassword
-const AddUserModal = ({ 
-    onClose, 
-    roles, 
-    form, 
-    handleChange, 
-    handleSubmit, 
-    formError, 
-    handleGeneratePassword 
-}) => {
-    return (
-        <div className="modal" style={{ display: 'flex' }}> {/* Gunakan class modal dari Layout.css */}
-            <div className="modal-content" style={{ maxWidth: '500px' }}>
-                <span className="close-button" onClick={onClose}>&times;</span>
-                <h3 id="modalTitle">Tambah Pengguna Baru</h3>
-                <p>Isi detail akun baru. Password akan di-*hash* secara otomatis di server.</p>
-                
-                <form onSubmit={handleSubmit}>
-                    {formError && <div className="notification error">{formError}</div>}
-                    
-                    <div className="form-group"><label>Nama Lengkap</label><input type="text" name="nama_lengkap" className="form-control" value={form.nama_lengkap} onChange={handleChange} required /></div>
-                    <div className="form-group"><label>Email</label><input type="email" name="email" className="form-control" value={form.email} onChange={handleChange} required /></div>
-                    
-                    <div className="form-group">
-                        <label>Peran</label>
-                        <select name="role_id" className="form-control" value={form.role_id} onChange={handleChange} required>
-                            <option value="">-- Pilih Peran --</option>
-                            {roles.map(r => (
-                                <option key={r.id} value={r.id}>{r.nama_role}</option>
-                            ))}
-                        </select>
-                    </div>
+function AddUserModal({ isOpen, onClose, onUserAdded }) {
+  const [formData, setFormData] = useState({
+    nama_lengkap: '',
+    email: '',
+    role_id: '',
+    password: '',
+    password_confirmation: '',
+  });
+  const [roles, setRoles] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
 
-                    <div className="form-group">
-                        <label>Password</label>
-                        <div style={{display: 'flex', gap: '10px'}}>
-                            <input type="text" name="password" className="form-control" value={form.password} onChange={handleChange} required />
-                            <button type="button" className="btn btn-secondary btn-sm" onClick={handleGeneratePassword} style={{minWidth: '150px'}}><i className="fas fa-key"></i> Generate</button>
-                        </div>
-                    </div>
-                    <div className="form-group"><label>Konfirmasi Password</label><input type="text" name="password_confirmation" className="form-control" value={form.password_confirmation} onChange={handleChange} required /></div>
+  useEffect(() => {
+    if (isOpen) {
+      // Reset state saat modal dibuka
+      setFormData({
+        nama_lengkap: '',
+        email: '',
+        role_id: '',
+        password: '',
+        password_confirmation: '',
+      });
+      setError(null);
+      setSuccess(false);
+      fetchRoles();
+    }
+  }, [isOpen]);
 
-                    <button type="submit" className="btn btn-primary btn-block">Simpan Pengguna</button>
-                </form>
-            </div>
+  const fetchRoles = async () => {
+    try {
+      const rolesData = await getRoles();
+      setRoles(rolesData);
+      // Set role_id default ke role pertama (atau biarkan kosong jika ada placeholder)
+      if (rolesData.length > 0) {
+        setFormData(prev => ({ ...prev, role_id: rolesData[0].id.toString() }));
+      }
+    } catch (err) {
+      console.error("Gagal mengambil Roles:", err);
+      setError("Gagal memuat daftar role.");
+    }
+  };
+
+  const handleGeneratePassword = () => {
+    const newPassword = generatePassword();
+    setFormData(prev => ({
+      ...prev,
+      password: newPassword,
+      password_confirmation: newPassword,
+    }));
+  };
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    // Cek password match
+    if (formData.password !== formData.password_confirmation) {
+      setError("Konfirmasi password tidak cocok.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      await createUser(formData);
+      setSuccess(true);
+      // Panggil fungsi refresh di parent page
+      if (onUserAdded) {
+        onUserAdded();
+      }
+      // Tunggu sebentar sebelum menutup modal
+      setTimeout(onClose, 1500); 
+
+    } catch (err) {
+      console.error("Error saat membuat pengguna:", err);
+      // Coba ambil pesan error dari backend Laravel
+      const apiError = err.response?.data?.message || err.response?.data?.errors?.email?.[0] || "Gagal membuat pengguna.";
+      setError(apiError);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content" style={{ maxWidth: '600px' }}>
+        <div className="modal-header">
+          <h3>Tambah Pengguna Baru</h3>
+          <button className="modal-close-btn" onClick={onClose}>&times;</button>
         </div>
-    );
-};
+        <form onSubmit={handleSubmit}>
+          
+          {error && <p className="alert alert-error">{error}</p>}
+          {success && <p className="alert alert-success">Pengguna berhasil dibuat!</p>}
+
+          <div className="input-group">
+            <label htmlFor="nama_lengkap">Nama Lengkap</label>
+            <input type="text" id="nama_lengkap" name="nama_lengkap" value={formData.nama_lengkap} onChange={handleChange} required />
+          </div>
+
+          <div className="input-group">
+            <label htmlFor="email">Email</label>
+            <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} required />
+          </div>
+
+          <div className="input-group">
+            <label htmlFor="role_id">Role Pengguna</label>
+            <select id="role_id" name="role_id" value={formData.role_id} onChange={handleChange} required>
+              <option value="" disabled>Pilih Role</option>
+              {roles.map(role => (
+                <option key={role.id} value={role.id}>{role.nama_role}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="input-group">
+            <label htmlFor="password">Password</label>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <input type="text" id="password" name="password" value={formData.password} onChange={handleChange} required minLength="6" placeholder="Password" />
+              <button type="button" className="btn btn-secondary" onClick={handleGeneratePassword} style={{ whiteSpace: 'nowrap' }}>
+                Generate
+              </button>
+            </div>
+          </div>
+          
+          {/* Laravel membutuhkan 'password_confirmation' untuk validasi 'confirmed' */}
+          <div className="input-group">
+            <label htmlFor="password_confirmation">Konfirmasi Password</label>
+            <input type="text" id="password_confirmation" name="password_confirmation" value={formData.password_confirmation} onChange={handleChange} required minLength="6" placeholder="Ulangi Password" />
+          </div>
+          
+          <button type="submit" className="btn btn-primary" disabled={isLoading || success}>
+            {isLoading ? 'Menyimpan...' : 'Simpan Pengguna'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 export default AddUserModal;

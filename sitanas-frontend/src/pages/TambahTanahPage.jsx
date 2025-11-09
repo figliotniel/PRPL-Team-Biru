@@ -6,7 +6,7 @@ import L from 'leaflet';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import '../assets/Layout.css'; 
-import { postTanahData } from '../services/tanahService';
+import { getMasterData } from '../services/tanahService';
 
 // Fix Leaflet Default Icon issue dengan Webpack/Vite
 delete L.Icon.Default.prototype._getIconUrl;
