@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createTanah } from '../services/tanahService';
 import { useAuth } from '../hooks/useAuth';
+import { useNotification } from '../hooks/useNotification';
 import '../assets/Layout.css';
 import MapPicker from '../components/common/MapPicker';
 
@@ -12,7 +13,9 @@ const initialFormState = {
     asal_perolehan: '',
     tanggal_perolehan: '',
     harga_perolehan: '',
+    bukti_perolehan: '',
     nomor_sertifikat: '',
+    tanggal_sertifikat: '',
     status_sertifikat: '',
     luas: '',
     lokasi: '',
@@ -29,6 +32,7 @@ const initialFormState = {
 function TambahTanahPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const { showNotification } = useNotification();
     
     const [form, setForm] = useState(initialFormState);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,7 +54,7 @@ function TambahTanahPage() {
         }
     };
     
-    // Handler baru untuk menerima koordinat dari MapPicker
+    // Handler untuk menerima koordinat dari MapPicker
     const handleCoordinatesSelect = useCallback((coords) => {
         setForm(prevForm => ({ ...prevForm, koordinat: coords }));
         
@@ -111,8 +115,10 @@ function TambahTanahPage() {
                 harga_perolehan: form.harga_perolehan ? parseFloat(form.harga_perolehan) : null,
                 luas: parseFloat(form.luas),
                 tanggal_perolehan: form.tanggal_perolehan || null,
+                tanggal_sertifikat: form.tanggal_sertifikat || null,
                 kode_barang: form.kode_barang || null,
                 nup: form.nup || null,
+                bukti_perolehan: form.bukti_perolehan || null,
                 nomor_sertifikat: form.nomor_sertifikat || null,
                 status_sertifikat: form.status_sertifikat || null,
                 lokasi: form.lokasi || null,
@@ -127,8 +133,8 @@ function TambahTanahPage() {
 
             const response = await createTanah(cleanedData);
             
-            // Sukses - redirect ke dashboard
-            alert('Data tanah berhasil ditambahkan!');
+            // Sukses - show notification dan redirect
+            showNotification('Data tanah berhasil ditambahkan!', 'success');
             navigate('/dashboard');
             
         } catch (err) {
@@ -157,7 +163,7 @@ function TambahTanahPage() {
         }
     };
 
-    // Guard - hanya admin dan kades
+    // Guard - hanya admin yang bisa tambah tanah
     if (user?.role_id !== 1 && user?.role_id !== 2) {
         return (
             <div>
@@ -198,18 +204,18 @@ function TambahTanahPage() {
                         <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem'}}>
                             
                             <div className="form-group">
-                                <label htmlFor="asal_perolehan">Asal Perolehan <span className="required-star">*</span></label>
+                                <label htmlFor="asal_perolehan">Asal Perolehan <span style={{color: 'red'}}>*</span></label>
                                 <input
                                     type="text"
                                     id="asal_perolehan"
                                     name="asal_perolehan"
-                                    className={`form-control ${validationErrors.asal_perolehan ? 'is-invalid' : ''}`}
+                                    className="form-control"
                                     value={form.asal_perolehan}
                                     onChange={handleChange}
                                     placeholder="Contoh: Hibah, Pembelian, Warisan"
                                     required
                                 />
-                                {validationErrors.asal_perolehan && <small className="error-message">{validationErrors.asal_perolehan}</small>}
+                                {validationErrors.asal_perolehan && <small style={{color: 'red'}}>{validationErrors.asal_perolehan}</small>}
                             </div>
 
                             <div className="form-group">
@@ -225,12 +231,12 @@ function TambahTanahPage() {
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor="luas">Luas (m²) <span className="required-star">*</span></label>
+                                <label htmlFor="luas">Luas (m²) <span style={{color: 'red'}}>*</span></label>
                                 <input
                                     type="number"
                                     id="luas"
                                     name="luas"
-                                    className={`form-control ${validationErrors.luas ? 'is-invalid' : ''}`}
+                                    className="form-control"
                                     value={form.luas}
                                     onChange={handleChange}
                                     placeholder="Contoh: 1000"
@@ -238,7 +244,7 @@ function TambahTanahPage() {
                                     min="0.01"
                                     step="0.01"
                                 />
-                                {validationErrors.luas && <small className="error-message">{validationErrors.luas}</small>}
+                                {validationErrors.luas && <small style={{color: 'red'}}>{validationErrors.luas}</small>}
                             </div>
 
                             <div className="form-group">
@@ -247,13 +253,13 @@ function TambahTanahPage() {
                                     type="number"
                                     id="harga_perolehan"
                                     name="harga_perolehan"
-                                    className={`form-control ${validationErrors.harga_perolehan ? 'is-invalid' : ''}`}
+                                    className="form-control"
                                     value={form.harga_perolehan}
                                     onChange={handleChange}
                                     placeholder="Contoh: 150000000"
                                     min="0"
                                 />
-                                {validationErrors.harga_perolehan && <small className="error-message">{validationErrors.harga_perolehan}</small>}
+                                {validationErrors.harga_perolehan && <small style={{color: 'red'}}>{validationErrors.harga_perolehan}</small>}
                             </div>
 
                         </div>
@@ -278,6 +284,18 @@ function TambahTanahPage() {
                                     value={form.nomor_sertifikat}
                                     onChange={handleChange}
                                     placeholder="Contoh: SHM 123456"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="tanggal_sertifikat">Tanggal Sertifikat</label>
+                                <input
+                                    type="date"
+                                    id="tanggal_sertifikat"
+                                    name="tanggal_sertifikat"
+                                    className="form-control"
+                                    value={form.tanggal_sertifikat}
+                                    onChange={handleChange}
                                 />
                             </div>
 
@@ -307,7 +325,7 @@ function TambahTanahPage() {
                                     className="form-control"
                                     value={form.kode_barang}
                                     onChange={handleChange}
-                                    placeholder="Contoh: 01.01.01.01.01"
+                                    placeholder="Contoh: TKD-001 (Opsional, akan digenerate otomatis)"
                                 />
                             </div>
 
@@ -321,6 +339,19 @@ function TambahTanahPage() {
                                     value={form.nup}
                                     onChange={handleChange}
                                     placeholder="Contoh: 123"
+                                />
+                            </div>
+                            
+                            <div className="form-group">
+                                <label htmlFor="bukti_perolehan">Bukti Perolehan</label>
+                                <input
+                                    type="text"
+                                    id="bukti_perolehan"
+                                    name="bukti_perolehan"
+                                    className="form-control"
+                                    value={form.bukti_perolehan}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: No. Akta Hibah/BAST"
                                 />
                             </div>
                         </div>
@@ -387,11 +418,11 @@ function TambahTanahPage() {
                             </div>
                         </div>
 
-                        {/* --- INI ADALAH BAGIAN MAP --- */}
+                        {/* Peta Interaktif */}
                         <div className="form-group" style={{marginTop: '1.5rem'}}>
                             <label htmlFor="koordinat">
                                 Koordinat Lokasi
-                                {validationErrors.koordinat && <small className="error-message" style={{marginLeft: '1rem'}}>{validationErrors.koordinat}</small>}
+                                {validationErrors.koordinat && <small style={{marginLeft: '1rem', color: 'red'}}>{validationErrors.koordinat}</small>}
                             </label>
                             
                             {/* Komponen Peta */}
@@ -400,22 +431,21 @@ function TambahTanahPage() {
                                 onCoordinatesSelect={handleCoordinatesSelect}
                             />
                             
-                            {/* Input Manual Tetap Ada */}
+                            {/* Input Manual */}
                             <input 
                                 type="text"
                                 id="koordinat"
                                 name="koordinat"
-                                className={`form-control ${validationErrors.koordinat ? 'is-invalid' : ''}`}
-                                style={{marginTop: '1rem'}} // Beri jarak dari peta
+                                className="form-control"
+                                style={{marginTop: '1rem'}}
                                 value={form.koordinat}
-                                onChange={handleChange} // Tetap gunakan handleChange agar sinkron
+                                onChange={handleChange}
                                 placeholder="Contoh: -6.200000, 106.816666"
                             />
-                            <small className="form-helper-text">
+                            <small style={{color: 'var(--text-muted)', fontSize: '0.875rem'}}>
                                 Klik pada peta untuk memilih lokasi, atau masukkan koordinat (latitude, longitude) secara manual.
                             </small>
                         </div>
-                        {/* --- AKHIR BAGIAN MAP --- */}
 
                     </div>
                 </div>

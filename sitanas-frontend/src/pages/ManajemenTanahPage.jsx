@@ -1,10 +1,8 @@
 // src/pages/ManajemenTanahPage.jsx
 import React, { useState, useEffect } from 'react';
-// 1. Tambahkan FaFileAlt
 import { FaPlus, FaEdit, FaTrash, FaFileAlt } from 'react-icons/fa';
 
 import { getStats, deleteTanah } from '../services/tanahService';
-// 2. Import kedua modal
 import AddTanahModal from '../components/common/AddTanahModal';
 import DokumenModal from '../components/common/DokumenModal';
 
@@ -16,9 +14,8 @@ function ManajemenTanahPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTanah, setEditingTanah] = useState(null);
 
-  // 3. State baru untuk modal dokumen
   const [isDokumenModalOpen, setIsDokumenModalOpen] = useState(false);
-  const [selectedTanah, setSelectedTanah] = useState(null); // Menyimpan tanah yg dipilih
+  const [selectedTanah, setSelectedTanah] = useState(null);
 
   useEffect(() => {
     const fetchTanah = async () => {
@@ -59,13 +56,11 @@ function ManajemenTanahPage() {
     }
   };
   
-  // 4. Handler baru untuk membuka modal dokumen
   const handleOpenDokumen = (tanah) => {
     setSelectedTanah(tanah);
     setIsDokumenModalOpen(true);
   };
 
-  // Fungsi ini dari Step 12
   const handleSave = (savedData, isEdit) => {
     if (isEdit) {
       setTanah(tanah.map(item => 
@@ -76,8 +71,19 @@ function ManajemenTanahPage() {
     }
   };
   
-  if (isLoading) { /* ... (bagian loading biarkan) ... */ }
-  if (error) { /* ... (bagian error biarkan) ... */ }
+  if (isLoading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <p>Loading data tanah...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="notification error">{error}</div>
+    );
+  }
 
   return (
     <div className="page-content">
@@ -92,7 +98,11 @@ function ManajemenTanahPage() {
         <table className="data-table">
           <thead>
             <tr>
-              {/* ... (th No, Nama Bidang, dll.) ... */}
+              <th>No</th>
+              <th>Nama Bidang</th>
+              <th>Lokasi</th>
+              <th>Luas (m²)</th>
+              <th>Status Kepemilikan</th>
               <th>Aksi</th>
             </tr>
           </thead>
@@ -106,7 +116,6 @@ function ManajemenTanahPage() {
                   <td>{item.luas ? item.luas.toLocaleString('id-ID') : 0}</td>
                   <td>{item.status_kepemilikan}</td>
                   <td>
-                    {/* 5. TAMBAHKAN TOMBOL DOKUMEN INI */}
                     <button 
                       className="btn-icon" 
                       onClick={() => handleOpenDokumen(item)} 
@@ -114,7 +123,6 @@ function ManajemenTanahPage() {
                     >
                       <FaFileAlt />
                     </button>
-                    {/* Tombol Edit dan Hapus (sudah ada) */}
                     <button className="btn-icon" onClick={() => handleEdit(item)} title="Edit Data">
                       <FaEdit />
                     </button>
@@ -135,7 +143,7 @@ function ManajemenTanahPage() {
         </table>
       </div>
       
-      {/* Modal untuk Tambah/Edit Tanah (dari Step 12) */}
+      {/* Modal untuk Tambah/Edit Tanah */}
       <AddTanahModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -143,7 +151,7 @@ function ManajemenTanahPage() {
         tanahToEdit={editingTanah}
       />
 
-      {/* 6. RENDER MODAL DOKUMEN DI SINI */}
+      {/* Modal Dokumen */}
       <DokumenModal
         isOpen={isDokumenModalOpen}
         onClose={() => setIsDokumenModalOpen(false)}

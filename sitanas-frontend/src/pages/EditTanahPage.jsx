@@ -1,105 +1,157 @@
 // src/pages/EditTanahPage.jsx
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getTanahById, getStats, updateTanah } from '../services/tanahService';
-import TanahForm from '../components/common/TanahForm';
+import { useParams, useNavigate } from 'react-router-dom';
+// Pastikan semua service yang diperlukan diimpor
+import { getTanahDetail, updateTanah, getMasterData } from '../services/tanahService'; 
 import { useAuth } from '../hooks/useAuth';
+import TanahForm from '../components/common/TanahForm'; // <-- Wajib ada
+import '../assets/Layout.css';
 
 function EditTanahPage() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
     
-    const [initialData, setInitialData] = useState(null); // Data awal form
-    const [masterData, setMasterData] = useState(null);
+    const [initialForm, setInitialForm] = useState(null); // Data awal untuk form
+    const [masterData, setMasterData] = useState(null); // Data master untuk dropdown
     const [loading, setLoading] = useState(true);
-    const [submitError, setSubmitError] = useState(null);
-    const [submitLoading, setSubmitLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [masterResponse, detailResponse] = await Promise.all([
-                    getMasterData(),
-                    getTanahDetail(id)
-                ]);
-                
-                setMasterData(masterResponse);
-                
-                // Set data awal untuk form
-                const data = detailResponse;
-                setInitialData({
-                    ...data,
-                    // Format tanggal YYYY-MM-DD
-                    tanggal_perolehan: data.tanggal_perolehan ? data.tanggal_perolehan.split('T')[0] : '',
-                    tanggal_sertifikat: data.tanggal_sertifikat ? data.tanggal_sertifikat.split('T')[0] : '',
-                    // TODO: Logic untuk set kategori_utama & sub_kategori dari kode_barang
-                });
+    // Guard: Hanya Admin yang boleh mengedit (opsional, sesuaikan dengan role_id Anda)
+    if (user?.role_id !== 1) {
+        return (
+            <div>
+                <h1>Akses Ditolak</h1>
+                <div className="notification error">
+                    <i className="fas fa-exclamation-triangle"></i>
+                    Anda tidak memiliki izin untuk mengedit data tanah.
+                </div>
+            </div>
+        );
+    }
 
-            } catch (err) {
-                setSubmitError("Gagal memuat data aset lama.");
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, [id]);
-
-    const handleSubmit = async (e, form) => {
-        e.preventDefault();
-        setSubmitLoading(true);
-        setSubmitError(null);
-
-        // Map data form
-        const dataToSend = {
-            ...form,
-            harga_perolehan: parseFloat(form.harga_perolehan || 0),
-            luas: parseFloat(form.luas),
-            kategori_utama: undefined, // Hapus field sementara
-            sub_kategori: undefined,
-        };
-        
+    // Fungsi untuk memuat data awal
+    const fetchData = async () => {
         try {
-            await updateTanah(id, dataToSend);
-            alert("Data aset berhasil diperbarui!");
-            navigate(`/detail-tanah/${id}`);
+            setLoading(true);
+            setError(null);
+            
+            // Ambil detail data tanah
+            const tanahDetailPromise = getTanahDetail(id);
+            // Ambil data master (diperlukan untuk dropdown di form)
+            const masterDataPromise = getMasterData(); 
+            
+            const [tanahData, masterResponse] = await Promise.all([
+                tanahDetailPromise,
+                masterDataPromise
+            ]);
+            
+            // Set data tanah ke state form
+            setInitialForm(tanahData); 
+            setMasterData(masterResponse);
+            
         } catch (err) {
-            const validationError = err.response?.data?.errors 
-                                    ? Object.values(err.response.data.errors).flat().join('; ')
-                                    : "Gagal menyimpan perubahan.";
-            setSubmitError(validationError);
+            console.error("Gagal memuat data edit:", err);
+            // Memberikan pesan spesifik jika masterData gagal
+            const errorMessage = err.message === 'Gagal memuat master data' 
+                                 ? 'Gagal memuat data Master. Cek koneksi API dan endpoint Master Data.'
+                                 : err.response?.data?.message || "Gagal memuat data untuk pengeditan. Silakan coba lagi.";
+            setError(errorMessage);
         } finally {
-            setSubmitLoading(false);
+            setLoading(false);
         }
     };
 
-    if (user?.role_id !== 1) {
-        return <div className="notification error">Akses ditolak.</div>;
+    useEffect(() => {
+        fetchData();
+    }, [id]);
+
+    // Handler saat form disubmit
+    const handleSubmit = async (formData) => {
+        setIsSubmitting(true);
+        setError(null);
+
+        try {
+            // Panggil fungsi updateTanah dari service
+            await updateTanah(id, formData); 
+            
+            alert('Data tanah berhasil diperbarui!');
+            navigate(`/detail-tanah/${id}`); // Redirect ke halaman detail
+            
+        } catch (err) {
+            console.error('Update error:', err);
+            setError(err.response?.data?.message || 'Gagal menyimpan perubahan. Periksa kembali input Anda.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    if (loading) {
+        return <div className="loading-container" style={{textAlign: 'center', padding: '50px'}}>Memuat data pengeditan...</div>;
     }
-    if (loading) return <div style={{textAlign: 'center', padding: '50px'}}>Loading Data...</div>;
+
+    // Menampilkan pesan error jika fetching data gagal total
+    if (error && !initialForm) {
+        return (
+            <div className="content-header">
+                <h1>Edit Aset Tanah</h1>
+                <div className="notification error">
+                    <i className="fas fa-exclamation-circle"></i> {error}
+                </div>
+                <button onClick={() => navigate('/dashboard')} className="btn btn-secondary" style={{marginTop: '10px'}}>
+                    Kembali ke Dashboard
+                </button>
+            </div>
+        );
+    }
+    
+    // Pengecekan apakah data yang dimuat sudah diarsip (Tidak bisa diedit)
+    if (initialForm?.deleted_at) {
+        return (
+            <div className="content-header">
+                <h1>Edit Aset Tanah</h1>
+                <div className="notification warning" style={{backgroundColor: '#fef3c7', color: '#b45309', borderColor: '#fcd34d'}}>
+                    <i className="fas fa-archive"></i> Data ini sudah diarsipkan dan tidak bisa diedit. Silakan kembalikan dari arsip di Dashboard.
+                </div>
+                <button onClick={() => navigate('/dashboard')} className="btn btn-secondary">
+                    Kembali ke Dashboard
+                </button>
+            </div>
+        );
+    }
 
     return (
-        <>
+        <div>
             <div className="content-header">
-                <h1>Edit Data Tanah (Kode: {initialData?.kode_barang || ''})</h1>
-                <Link to={`/detail-tanah/${id}`} className="btn btn-secondary">Batalkan Edit</Link>
+                <h1>Edit Data Tanah Kas Desa</h1>
+                <p style={{color: 'var(--text-muted)', marginTop: '0.5rem'}}>
+                    Perbarui informasi aset dengan Kode: <strong>{initialForm?.kode_barang || '-'}</strong>
+                </p>
             </div>
-            
-            <div className="card">
-                <div className="card-body">
-                    {/* Render form HANYA jika data awal sudah siap */}
-                    {initialData && (
-                        <TanahForm
-                            initialData={initialData}
-                            masterData={masterData}
-                            onSubmit={handleSubmit}
-                            submitLoading={submitLoading}
-                            error={submitError}
-                        />
-                    )}
+
+            {error && (
+                <div className="notification error">
+                    <i className="fas fa-exclamation-circle"></i> {error}
                 </div>
-            </div>
-        </>
+            )}
+            
+            {/* Komponen TanahForm akan menerima data awal dan handler submit */}
+            {/* Hanya render jika initialForm dan masterData tersedia */}
+            {initialForm && masterData ? (
+                <TanahForm
+                    initialData={initialForm}
+                    masterData={masterData}
+                    onSubmit={handleSubmit}
+                    isSubmitting={isSubmitting}
+                    isEditing={true}
+                    onCancel={() => navigate(`/detail-tanah/${id}`)}
+                />
+            ) : (
+                <div className="loading-container" style={{textAlign: 'center', padding: '50px'}}>Memuat form...</div>
+            )}
+            
+        </div>
     );
 }
 

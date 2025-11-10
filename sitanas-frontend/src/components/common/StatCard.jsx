@@ -1,13 +1,17 @@
 import React from 'react';
-// Asumsi Anda sudah memiliki styling untuk .card-stat, dll.
 
-function StatCard({ title, value, iconClass, color }) {
+function StatCard({ label, value, unit, icon, color }) {
+  const iconClass = `fas ${icon}`;
+  
   return (
     <div className="card card-stat" style={{ borderLeft: `5px solid ${color}` }}>
       <div className="card-body">
         <div className="stat-content">
-          <h5 className="stat-title">{title}</h5>
-          <h1 className="stat-value">{value}</h1>
+          <h5 className="stat-title">{label}</h5>
+          <h1 className="stat-value">
+            {value}
+            {unit && <span className="stat-unit">{unit}</span>}
+          </h1>
         </div>
         <div className="stat-icon" style={{ color }}>
           <i className={iconClass}></i>

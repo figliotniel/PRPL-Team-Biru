@@ -1,19 +1,12 @@
-// src/components/common/AddPemanfaatanModal.jsx
 import React, { useState, useEffect } from 'react';
-
-// 1. Import service Pemanfaatan DAN Tanah
 import { createPemanfaatan, updatePemanfaatan } from '../../services/pemanfaatanTanahService';
-import { getStats } from '../../services/tanahService'; // Untuk dropdown
-
-// Gunakan CSS yang sama
+import { getStats } from '../../services/tanahService';
 import '../../assets/AddUserModal.css'; 
 
-// Fungsi helper untuk format tanggal YYYY-MM-DD
 const formatDateToInput = (dateString) => {
   if (!dateString) return '';
   return new Date(dateString).toISOString().split('T')[0];
 };
-
 function AddPemanfaatanModal({ isOpen, onClose, onSave, dataToEdit }) {
   
   // 2. Tentukan mode
@@ -108,7 +101,7 @@ function AddPemanfaatanModal({ isOpen, onClose, onSave, dataToEdit }) {
       }
 
       // 8. Panggil callback 'onSave' dengan data baru/updated
-      onSave(response, isEditMode); // 'response' sudah berisi data lengkap dari backend
+      onSave(response, isEditMode);
       onClose(); // Tutup modal jika sukses
 
     } catch (err) {
