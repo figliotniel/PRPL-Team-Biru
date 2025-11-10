@@ -7,8 +7,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-
-// --- TAMBAHKAN INI ---
 use App\Models\Role; // Import model Role
 
 class User extends Authenticatable
@@ -22,9 +20,9 @@ class User extends Authenticatable
     protected $fillable = [
         'nama_lengkap',
         'email',
-// ... existing code ...
         'password',
         'role_id',
+        'status',
     ];
 
     /**
@@ -45,10 +43,6 @@ class User extends Authenticatable
         'password' => 'hashed', 
     ];
 
-    // --- TAMBAHKAN FUNGSI INI ---
-    /**
-     * Mendefinisikan relasi ke model Role.
-     */
     public function role()
     {
         return $this->belongsTo(Role::class);

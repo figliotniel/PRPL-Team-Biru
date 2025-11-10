@@ -4,11 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes; // Untuk fitur hapus (nonaktifkan)
+use Illuminate\Database\Eloquent\SoftDeletes; 
+use App\Models\DokumenPendukung;
+use App\Models\LogAktivitas;
 
 class Tanah extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes; // <-- Kunci Soft Delete
 
     /**
      * Kolom yang boleh diisi secara massal (mass assignable).
@@ -53,16 +55,11 @@ class Tanah extends Model
      */
     public function penginput()
     {
-        // 'user_id' adalah foreign key di tabel 'tanahs'
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    /**
-     * Relasi ke User (Validator).
-     */
     public function validator()
     {
-        // 'validator_id' adalah foreign key di tabel 'tanahs'
         return $this->belongsTo(User::class, 'validator_id');
     }
 
@@ -71,16 +68,16 @@ class Tanah extends Model
      */
     public function pemanfaatan()
     {
-        return $this->hasMany(Pemanfaatan::class);
+        return $this->hasMany(PemanfaatanTanah::class);
     }
 
-    /**
-     * Relasi ke Histori/Log (Satu aset punya banyak histori).
-     * Ini adalah relasi untuk 'data.histori' di DetailTanahPage.jsx
-     */
     public function histori()
     {
-        // 'tanah_id' adalah foreign key di tabel 'logs'
-        return $this->hasMany(Log::class, 'tanah_id');
+        return $this->hasMany(LogAktivitas::class, 'tanah_id');
+    }
+
+    public function dokumenPendukung() 
+    {
+        return $this->hasMany(DokumenPendukung::class, 'tanah_id');
     }
 }

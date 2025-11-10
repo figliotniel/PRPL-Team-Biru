@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use App\Models\LogAktivitas; 
 use App\Models\User;
+use App\Models\Role;
 
 class UserController extends Controller
 {
@@ -20,44 +21,39 @@ class UserController extends Controller
      */
     public function index()
     {
-        // 2. Ambil semua user, 'with('role')' penting
-        //    agar data role ikut terkirim ke frontend.
         $users = User::with('role')->get();
-        
         return response()->json($users);
     }
-
-    /**
-     * Menyimpan pengguna baru ke database.
-     * (Dipanggil oleh 'createUser' di frontend)
-     */
+    public function getRoles()
+    {
+        $roles = Role::all();
+        return response()->json($roles);
+    }
     public function store(Request $request)
     {
-        // 3. Validasi data yang dikirim dari AddUserModal
         $validatedData = $request->validate([
-            'name' => 'required|string|max:255',
+            'nama_lengkap' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8',
-            'role_id' => 'required|integer|exists:roles,id', // Pastikan role_id ada di tabel roles
+            'password' => 'required|string|min:8|confirmed',
+            'role_id' => 'required|integer|exists:roles,id',
         ]);
 
-        // 4. Buat user baru
         $user = User::create([
-            'name' => $validatedData['name'],
+            'nama_lengkap' => $validatedData['nama_lengkap'],
             'email' => $validatedData['email'],
-            'password' => Hash::make($validatedData['password']), // Wajib HASH password
+            'password' => Hash::make($validatedData['password']),
             'role_id' => $validatedData['role_id'],
+            'status' => 'Aktif',
         ]);
 
-      try {
+        try {
             LogAktivitas::create([
-                'user_id' => Auth::id(), // ID user yang sedang login
-                'deskripsi' => 'Membuat pengguna baru: ' . $user->name
+                'user_id' => Auth::id(),
+                'deskripsi' => 'Membuat pengguna baru: ' . $user->nama_lengkap
             ]);
         } catch (\Exception $e) {
             // Abaikan error jika log gagal (opsional)
         }
-        // --- Akhir Blok Log ---
 
         $user->load('role'); 
         return response()->json($user, 201);
@@ -91,16 +87,16 @@ class UserController extends Controller
 
         // 6. Validasi untuk update
         $validatedData = $request->validate([
-            'name' => 'required|string|max:255',
+            'nama_lengkap' => 'required|string|max:255',
             // Email unik, tapi abaikan email user ini sendiri
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'role_id' => 'required|integer|exists:roles,id',
             // Password opsional, hanya di-update jika diisi
-            'password' => 'nullable|string|min:8'
+            'password' => 'nullable|string|min:8|confirmed'
         ]);
 
         // 7. Update data user
-        $user->name = $validatedData['name'];
+        $user->nama_lengkap = $validatedData['nama_lengkap'];
         $user->email = $validatedData['email'];
         $user->role_id = $validatedData['role_id'];
 
@@ -114,21 +110,16 @@ class UserController extends Controller
         try {
             LogAktivitas::create([
                 'user_id' => Auth::id(),
-                'deskripsi' => 'Mengupdate pengguna: ' . $user->name
+                'deskripsi' => 'Mengupdate pengguna: ' . $user->nama_lengkap
             ]);
         } catch (\Exception $e) {
             // Abaikan error jika log gagal
         }
-        // --- Akhir Blok Log ---
         
         $user->load('role');
         return response()->json($user);
     }
 
-    /**
-     * Menghapus pengguna dari database.
-     * (Dipanggil oleh 'deleteUser' di frontend)
-     */
     public function destroy(string $id)
     {
         $user = User::find($id);
@@ -136,11 +127,11 @@ class UserController extends Controller
             return response()->json(['message' => 'User tidak ditemukan'], 404);
         }
 
-        // (Opsional: Jangan biarkan user menghapus dirinya sendiri)
         if ($user->id === Auth::id()) {
              return response()->json(['message' => 'Anda tidak bisa menghapus akun Anda sendiri'], 403);
         }
-        $namaUserDihapus = $user->name;
+
+        $namaUserDihapus = $user->nama_lengkap;
         $user->delete();
 
         try {
@@ -153,5 +144,50 @@ class UserController extends Controller
         }
 
         return response()->json(null, 204);
+    }
+
+    public function deactivate(string $id)
+{
+    $user = User::find($id);
+    if (!$user) {
+        return response()->json(['message' => 'User tidak ditemukan'], 404);
+    }
+    if ($user->id === Auth::id()) {
+        return response()->json(['message' => 'Anda tidak bisa menonaktifkan akun Anda sendiri'], 403);
+    }
+
+    $user->status = 'Tidak Aktif';
+    $user->save();
+
+    try {
+        LogAktivitas::create([
+            'user_id' => Auth::id(),
+            'deskripsi' => 'Menonaktifkan pengguna: ' . $user->nama_lengkap
+        ]);
+    } catch (\Exception $e) {
+    $user->load('role');
+    return response()->json($user);
+    }
+}
+
+    public function activate(string $id)
+    {
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json(['message' => 'User tidak ditemukan'], 404);
+        }
+
+        $user->status = 'Aktif';
+        $user->save();
+        
+        try {
+            LogAktivitas::create([
+                'user_id' => Auth::id(),
+                'deskripsi' => 'Mengaktifkan pengguna: ' . $user->nama_lengkap
+            ]);
+        } catch (\Exception $e) { /* Abaikan error log */ }
+
+        $user->load('role');
+        return response()->json($user);
     }
 }
