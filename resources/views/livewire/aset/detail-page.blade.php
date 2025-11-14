@@ -22,7 +22,7 @@
         <div class="card-header"><h4>Informasi Detail Aset</h4></div>
         <div class="card-body grid-2-col">
             <div>
-                <h5>Data Utama</h5>
+                <h4>Data Utama</h4>
                 <ul class="detail-list">
                     <li><strong>Kode Barang</strong><span>{{ $aset->kode_barang ?? '-' }}</span></li>
                     <li><strong>NUP</strong><span>{{ $aset->nup ?? '-' }}</span></li>
@@ -38,7 +38,7 @@
                 </ul>
             </div>
             <div>
-                <h5>Data Legalitas</h5>
+                <h4>Data Legalitas</h4>
                 <ul class="detail-list">
                     <li><strong>Nomor Sertifikat</strong><span>{{ $aset->nomor_sertifikat ?? '-' }}</span></li>
                     <li><strong>Tgl. Sertifikat</strong><span>{{ $aset->tanggal_sertifikat ? \Carbon\Carbon::parse($aset->tanggal_sertifikat)->isoFormat('DD MMMM YYYY') : '-' }}</span></li>
@@ -46,7 +46,7 @@
                     <li><strong>Bukti Perolehan</strong><span>{{ $aset->bukti_perolehan ?? '-' }}</span></li>
                 </ul>
                 <hr>
-                <h5>Batas-Batas</h5>
+                <h4>Batas-Batas</h4>
                 <ul class="detail-list">
                     <li><strong>Batas Utara</strong><span>{{ $aset->batas_utara ?? '-' }}</span></li>
                     <li><strong>Batas Timur</strong><span>{{ $aset->batas_timur ?? '-' }}</span></li>
