@@ -28,7 +28,7 @@ Route::middleware('auth')->group(function () {
 
     // Rute Aset (Hilangkan duplikat)
     Route::get('/tanah/tambah', FormAset::class)->name('aset.tambah');
-    Route::get('/tanah/{aset}/edit', EditAset::class)->name('aset.edit');
+    Route::get('/tanah/{aset}/edit', EditAset::class)->withTrashed()->name('aset.edit');
     Route::get('/tanah/{aset}', DetailPage::class)->name('aset.detail');
 
     // Rute Laporan (Gabung di sini)

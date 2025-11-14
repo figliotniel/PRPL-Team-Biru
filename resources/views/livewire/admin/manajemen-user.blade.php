@@ -66,7 +66,7 @@
                                 <tr>
                                     <td>{{ $user->nama_lengkap }}</td>
                                     <td>{{ $user->email }}</td>
-                                    <td>{{ $user->role->nama_role }}</td>
+                                    <td>{{ $user->role?->nama_role ?? 'Tanpa Role' }}</td>
                                     <td>
                                         <span class="status {{ $user->status == 'aktif' ? 'disetujui' : 'ditolak' }}">
                                             {{ $user->status }}

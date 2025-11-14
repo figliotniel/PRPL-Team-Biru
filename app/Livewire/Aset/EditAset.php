@@ -5,14 +5,20 @@ namespace App\Livewire\Aset;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use App\Models\TanahKasDesa;
+use App\Models\DokumenPendukung;
+use Livewire\WithFileUploads;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 
 #[Layout('layouts.app')]
 class EditAset extends Component
 {
-    // 0. Properti untuk menyimpan ID aset
+    use WithFileUploads;
+
+    // Properti untuk menyimpan ID aset
     public TanahKasDesa $aset;
 
-    // 1. Properti untuk semua field (sama seperti FormAset)
+    // Properti untuk semua field (sama seperti FormAset)
     public $kode_barang = '';
     public $asal_perolehan = '';
     public $luas = '';
@@ -32,45 +38,43 @@ class EditAset extends Component
     public $batas_selatan = null;
     public $batas_barat = null;
     public $keterangan = null;
+    public $new_dokumen; 
+    public $existing_dokumen = []; 
 
     /**
-     * 2. Fungsi MOUNT()
-     * Ini berjalan PERTAMA KALI saat komponen dimuat.
-     * Tugasnya: Mengambil data dari DB dan mengisi semua properti.
+     * Fungsi MOUNT()
      */
     public function mount(TanahKasDesa $aset)
     {
         $this->aset = $aset;
+        $this->fill($aset);
 
-        // Mengisi semua properti dari data $aset
-        $this->kode_barang = $aset->kode_barang;
-        $this->asal_perolehan = $aset->asal_perolehan;
-        $this->luas = $aset->luas;
-        $this->tanggal_perolehan = $aset->tanggal_perolehan;
-        $this->lokasi = $aset->lokasi;
-        $this->nup = $aset->nup;
-        $this->harga_perolehan = $aset->harga_perolehan;
-        $this->bukti_perolehan = $aset->bukti_perolehan;
-        $this->nomor_sertifikat = $aset->nomor_sertifikat;
-        $this->tanggal_sertifikat = $aset->tanggal_sertifikat;
-        $this->status_sertifikat = $aset->status_sertifikat;
-        $this->penggunaan = $aset->penggunaan;
-        $this->koordinat = $aset->koordinat;
-        $this->kondisi = $aset->kondisi;
-        $this->batas_utara = $aset->batas_utara;
-        $this->batas_timur = $aset->batas_timur;
-        $this->batas_selatan = $aset->batas_selatan;
-        $this->batas_barat = $aset->batas_barat;
-        $this->keterangan = $aset->keterangan;
+        // Muat dokumen HANYA jika admin
+        // Kita juga akan cek ini di file blade
+        if (Auth::user()->role->nama_role === 'Admin') {
+            $this->loadExistingDokumen();
+        }
     }
 
     /**
-     * 3. Fungsi UPDATE()
-     * Ini adalah pengganti `aksi=edit` di proses_crud.php
+     * Fungsi helper untuk mengambil daftar dokumen dari DB
      */
-    public function update()
+    public function loadExistingDokumen()
     {
-        // 4. ATURAN VALIDASI (Sama seperti FormAset)
+        // Pastikan lagi hanya admin yang bisa memuat ini
+        if (Auth::user()->role->nama_role !== 'Admin') {
+            return;
+        }
+        $this->existing_dokumen = $this->aset->dokumen()->get();
+    }
+
+    /**
+     * Fungsi SAVE()
+     * Menyimpan perubahan data aset (data teks, angka, dll)
+     */
+    public function save()
+    {
+        // VALIDASI (Sama seperti FormAset)
         $validatedData = $this->validate([
             'kode_barang' => 'required|string|max:100',
             'asal_perolehan' => 'required|string|max:255',
@@ -93,16 +97,71 @@ class EditAset extends Component
             'keterangan' => 'nullable|string',
         ]);
 
-        // 5. UPDATE DATABASE
-        $this->aset->update($validatedData);
-
-        // 6. Buat pesan sukses
-        session()->flash('success', 'Data aset berhasil diperbarui.');
-
-        // 7. Redirect ke Dashboard
-        return $this->redirect('/', navigate: true);
+        try {
+            // UPDATE DATA ASET
+            $this->aset->update($validatedData);
+            session()->flash('success', 'Data aset berhasil diperbarui.');
+        } catch (\Exception $e) {
+            session()->flash('error', 'Terjadi kesalahan saat memperbarui data: ' . $e->getMessage());
+        }
     }
 
+    /**
+     * Fungsi untuk UPLOAD DOKUMEN BARU
+     */
+
+        public function uploadDokumen()
+    {
+        if (Auth::user()->role->nama_role !== 'Admin Desa') {
+            abort(403, 'Anda tidak memiliki hak akses untuk melakukan tindakan ini.');
+        }
+
+        $this->validate([
+            'new_dokumen' => 'required|file|mimes:jpg,jpeg,png,pdf,doc,docx,xls,xlsx|max:10240' 
+        ]);
+
+        try {
+            $path = $this->new_dokumen->store('dokumen_aset/' . $this->aset->id, 'public');
+            $this->aset->dokumen()->create([
+                'nama_dokumen' => $this->new_dokumen->getClientOriginalName(), 
+                'file_path' => $path,
+                'tipe_file' => $this->new_dokumen->getMimeType()
+            ]);
+
+            $this->reset('new_dokumen');
+            $this->loadExistingDokumen();
+            session()->flash('dokumen_success', 'Dokumen berhasil di-upload.');
+
+        } catch (\Exception $e) {
+            session()->flash('dokumen_error', 'Gagal meng-upload dokumen: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Fungsi untuk HAPUS DOKUMEN
+     */
+    public function hapusDokumen($dokumenId)
+    {
+        if (Auth::user()->role->nama_role !== 'Admin Desa') {
+            abort(403, 'Anda tidak memiliki hak akses untuk melakukan tindakan ini.');
+        }
+
+        try {
+            $dokumen = DokumenPendukung::find($dokumenId);
+            if ($dokumen && $dokumen->tanah_id == $this->aset->id) {
+                Storage::disk('public')->delete($dokumen->file_path);
+                $dokumen->delete();
+                $this->loadExistingDokumen();
+                session()->flash('dokumen_success', 'Dokumen berhasil dihapus.');
+            }
+        } catch (\Exception $e) {
+            session()->flash('dokumen_error', 'Gagal menghapus dokumen: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Fungsi RENDER
+     */
     public function render()
     {
         return view('livewire.aset.edit-aset');
