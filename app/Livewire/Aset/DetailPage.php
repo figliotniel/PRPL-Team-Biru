@@ -8,9 +8,9 @@ use App\Models\TanahKasDesa;
 use App\Models\DokumenPendukung;
 use App\Models\PemanfaatanTanah;
 use Livewire\WithFileUploads;
-use Illuminate\Support\Facades\Auth; // 1. PASTIKAN IMPORT INI ADA
+use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Facades\Storage; // 2. TAMBAHKAN IMPORT STORAGE
+use Illuminate\Support\Facades\Storage;
 
 #[Layout('layouts.app')]
 class DetailPage extends Component

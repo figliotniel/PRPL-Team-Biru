@@ -5,7 +5,9 @@
             <button wire:click="downloadDetailPdf" class="btn btn-secondary">
                 <i class="fas fa-print"></i> Cetak Detail
             </button>
-            <a href="{{ route('dashboard') }}" wire:navigate class="btn btn-primary">Kembali ke Dashboard</a>
+           <a href="{{ route('dashboard') }}" wire:navigate class="btn btn-secondary" style="margin-left: auto;">
+            <i class="fas fa-arrow-left"></i> Kembali
+        </a>
         </div>
     </div>
 

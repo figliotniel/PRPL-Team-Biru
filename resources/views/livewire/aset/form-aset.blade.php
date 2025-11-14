@@ -1,12 +1,18 @@
 <div>
     <div class="content-header">
-        <h1>Tambah Data Tanah Baru</h1>
+        <h1>
+            @if($isEditMode)
+                Edit Data Tanah
+            @else
+                Tambah Data Tanah Baru
+            @endif
+        </h1>
         <a href="{{ route('dashboard') }}" wire:navigate class="btn btn-secondary">Kembali</a>
     </div>
 
     <div class="card">
         <div class="card-body">
-            <form wire:submit="simpan">
+            <form wire:submit="save">
                 <h3>Data Penting (Wajib Diisi)</h3>
                 <div class="grid-2-col">
                     <div class="form-group">
@@ -63,11 +69,16 @@
                     <div class="form-group" style="grid-column: span 2;"><label>Keterangan Tambahan</label><textarea wire:model="keterangan" class="form-control"></textarea></div>
                 </div>
 
-                <button type="submit" class="btn btn-primary" style="margin-top: 1.5rem;">Simpan Data</button>
+                <button type="submit" class="btn btn-primary" style="margin-top: 1.5rem;">
+                    @if($isEditMode)
+                        Simpan Perubahan
+                    @else
+                        Simpan Data
+                    @endif
+                </button>
             </form>
-                <div class="form-group" style="grid-column: 1 / -1; margin-top: 1rem;">
+            <div class="form-group" style="grid-column: 1 / -1; margin-top: 1rem;">
                 <label>Pilih Lokasi di Peta (Klik pada Peta)</label>
-                <div id="map" style="height: 350px; width: 100%; border-radius: 8px; z-index: 1;"></div>
                 <div wire:ignore id="map" style="height: 350px; width: 100%; border-radius: 8px; z-index: 1;"></div>
             </div>
         </div>
@@ -76,19 +87,13 @@
 
 @script
 <script>
-    // 1. KEMBALIKAN KE 'livewire:navigated'
-    // Ini akan berjalan SETIAP KALI kita masuk ke halaman ini
     document.addEventListener('livewire:navigated', () => {
 
-        // 2. CEK & HANCURKAN PETA LAMA (JIKA ADA)
-        // Kita gunakan variabel global (window) agar bisa dicek
         if (window.sitanasMap) {
             window.sitanasMap.remove();
             window.sitanasMap = null;
         }
 
-        // 3. Inisialisasi Peta BARU
-        // (Kita simpan di variabel global lagi)
         window.sitanasMap = L.map('map').setView([-7.7956, 110.3695], 13);
         var marker;
 
@@ -96,16 +101,13 @@
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(window.sitanasMap);
 
-        // 4. Logika Saat Peta Diklik
         window.sitanasMap.on('click', function(e) {
             const lat = e.latlng.lat.toFixed(6);
             const lng = e.latlng.lng.toFixed(6);
             const koordinatString = `${lat},${lng}`;
 
-            // 5. KIRIM DATA KE LIVEWIRE (INI KUNCINYA)
             @this.set('koordinat', koordinatString);
 
-            // 6. Pindahkan marker
             if (!marker) {
                 marker = L.marker(e.latlng).addTo(window.sitanasMap);
             } else {
@@ -114,12 +116,9 @@
             window.sitanasMap.panTo(e.latlng);
         });
 
-        // 7. Bagian "Livewire.on('koordinat-updated')" sudah benar,
-        // biarkan saja seperti itu.
         Livewire.on('koordinat-updated', (koordinatString) => {
             if (koordinatString) {
                 const parts = koordinatString.split(',');
-                // ... (sisa kode ini sudah benar, tapi pastikan pakai 'window.sitanasMap')
                 const lat = parseFloat(parts[0]);
                 const lng = parseFloat(parts[1]);
                 
@@ -130,11 +129,10 @@
                     } else {
                         marker.setLatLng(latLng);
                     }
-                    window.sitanasMap.setView(latLng, 17); // Zoom ke lokasi
+                    window.sitanasMap.setView(latLng, 17);
                 }
             }
         });
-
     });
 </script>
 @endscript

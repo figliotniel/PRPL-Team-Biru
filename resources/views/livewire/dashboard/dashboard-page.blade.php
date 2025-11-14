@@ -61,14 +61,15 @@
                             </td>
 
                             <td class="action-buttons">
-                                <a href="{{ route('aset.detail', ['aset' => $aset->id]) }}" wire:navigate class="btn btn-sm btn-info" title="Lihat Detail"><i class="fas fa-eye"></i></a>
+                                <a href="{{ route('aset.detail', ['aset' => $aset->id]) }}" wire:navigate class="btn btn-sm btn-primary" title="Lihat Detail"><i class="fas fa-eye"></i></a>
 
                                 @if(auth()->user()->role_id == 1)
-                                    <a href="{{ route('aset.edit', ['aset' => $aset->id]) }}" wire:navigate class="btn btn-sm btn-warning" title="Edit Data"><i class="fas fa-edit"></i></a>
+                                    <a href="{{ route('aset.edit', ['aset' => $aset->id]) }}" wire:navigate class="btn btn-sm btn-warning" title="Edit Data"><i class="fas fa-pencil-alt"></i></a>
+                                    
                                     <button 
                                         wire:click="arsipkan({{ $aset->id }})" 
                                         wire:confirm="Anda yakin ingin mengarsipkan data ini?"
-                                        class="btn btn-sm btn-danger" 
+                                        class="btn btn-sm btn-secondary" 
                                         title="Arsipkan">
                                         <i class="fas fa-archive"></i>
                                     </button>
